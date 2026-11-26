@@ -1,0 +1,25 @@
+#include "Version.xcconfig"
+
+// App identity. A new project changes only these values.
+APP_DISPLAY_NAME = Tote
+APP_BUNDLE_IDENTIFIER = org.zaxh.tote
+DEVELOPMENT_TEAM =
+
+// Platforms. Use TARGETED_DEVICE_FAMILY = 1,2 for iPhone and iPad.
+// SUPPORTS_MACCATALYST = YES needs TARGETED_DEVICE_FAMILY = 1,2.
+TARGETED_DEVICE_FAMILY = 1
+SUPPORTS_MACCATALYST = NO
+
+// Shared by the App and AppTests targets. Do not set these in the Xcode
+// project, because a project value overrides this file.
+IPHONEOS_DEPLOYMENT_TARGET = 26.0
+SWIFT_VERSION = 6.0
+SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor
+SWIFT_APPROACHABLE_CONCURRENCY = YES
+SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES
+GENERATE_INFOPLIST_FILE = YES
+PRODUCT_NAME = $(TARGET_NAME)
+
+CODE_SIGN_STYLE = Automatic
+CODE_SIGN_IDENTITY = Apple Development
+PRODUCT_BUNDLE_IDENTIFIER = $(APP_BUNDLE_IDENTIFIER)

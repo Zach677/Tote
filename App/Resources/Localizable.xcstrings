@@ -1,0 +1,22 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "Programmatic UIKit starter is ready." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Programmatic UIKit starter is ready."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "纯代码 UIKit 起步模板已就绪。"
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}
