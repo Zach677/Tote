@@ -26,27 +26,37 @@ Tote is a local-only iOS 26 UIKit app that unifies campus parcel pickup codes, t
 
 ### D4. Cainiao, SF Express, JD, and Family-Ordered Parcels
 - The user does not install standalone Cainiao or SF Express apps. Do not clutter the primary action bar with `cainiao://` or `sfexpress://` buttons.
-- **Phase 1**: Clipboard auto-detection and quick entry handle family-forwarded pickup codes and tracking numbers immediately.
+- **Phase 1**: Explicit paste via native `UIPasteControl` inside the Quick Add sheet (plus manual entry fallback from both empty and unparsed states) handles family-forwarded pickup codes and tracking numbers immediately without triggering iOS automatic pasteboard permission banners.
 - **Phase 2**: iOS Shortcuts App Intents ingest pickup SMS messages automatically (covering Cainiao, SF Express, JD, and SMS-enabled stations/lockers). Add optional JD mobile H5 (`https://trade.m.jd.com/order/orderlist_jdm.shtml`) `WKWebView` sync and optional SF web lookup as decoupled adapters that merge into `Packages/Core` by tracking number or pickup code.
 
 ### D5. Fast Access to Duoduo Identity Barcode
 - Keep the Duoduo deep link configurable in settings so a deeper barcode-tab route can be substituted later without an app rebuild.
-- Phase 1 exposes a top primary action on the dashboard. Phase 3 adds an iOS Control Center `ControlWidget` and Lock Screen / Home Screen widgets to launch it directly without browsing the Home Screen.
+- Validate custom Duoduo links in Settings as non-empty `<scheme>://<host-or-path>` URLs (trimmed, rejecting scheme-less text or empty `scheme://` shells) so the validation rule matches the user-facing error guidance.
+- Phase 1 exposes a top primary action row on the Pending list (always visible, including empty state) and copy-then-open directly on each tracking-only parcel row. Phase 3 adds an iOS Control Center `ControlWidget` and Lock Screen / Home Screen widgets to launch it directly without browsing the Home Screen.
 
 ### D6. Privacy and Repository Hygiene
 - Never commit real phone numbers, real tracking numbers, real pickup codes, real campus/building names, real screenshots, session cookies, or personal Apple signing team IDs.
 - All tests and previews must use synthetic fixtures (for example `12-3-0000`, `YT0000000000000`, `Sample Locker A1`).
 - Keep personal signing settings (`DEVELOPMENT_TEAM`) in untracked `Configuration/Developer.xcconfig`.
 
+### D7. Phase 1 UI Shell, Lifecycle, and Local Persistence
+- **Two-Tab Shell**: `RootViewController` is a `UITabBarController` with Tab 1 **Parcels** (`包裹`) and Tab 2 **Yixiaoji** (`宜小集`), each wrapped in its own `UINavigationController`.
+- **Visual Identity**: Warm "kraft" amber `AccentColor` (`#9C5700` Light / `#F5A83B` Dark); system-colored SF Symbols per `PickupChannel` (no third-party brand logos); large bold tabular pickup codes and SF Mono tracking numbers.
+- **List Grouping**: Pending view shows (1) the Duoduo action row, (2) non-empty `PickupChannel` sections (`duoduo`, `yixiaoji`, `cainiao`, `sfExpress`, `jd`, `other`) with station names as secondary text, and (3) a dedicated **Waiting for Pickup Code** section at the bottom for tracking-only parcels.
+- **Parcel Lifecycle**: Two states (`pending` and `pickedUp`), plus permanent deletion (full swipe disabled on Delete). The **Picked Up** segment serves as history/undo (swipe to restore); picked-up parcels older than 30 days are auto-pruned locally. No separate archive state.
+- **Quick Add Flow**: Presented via the navigation bar `+` button as a large sheet with `UIPasteControl`, live `PickupParser` preview rows (tap to push a detail editor), duplicate detection against existing pending parcels, and direct **Enter Manually** access from both initial and unparsed states.
+- **Yixiaoji Handoff**: Tapping a Yixiaoji parcel copies its pickup code, switches to Tab 2, and shows a glass handoff banner that auto-dismisses after 8 seconds (held while VoiceOver is active) and re-copies on tap.
+- **Local Persistence**: `Packages/Core` stores parcels in a zero-dependency atomic JSON file at an injectable directory `URL` (keeping `mise test-core` fast on macOS and allowing Phase 2/3 to switch directly to an App Group container URL).
+
 ## Phased Delivery Plan
 
 Each phase must ship a usable, verified app on its own.
 
 ### Phase 1: Core Daily-Driver App
-- Replace the `App/Interface/Root/` and `AppTests/Interface/Root/` template placeholder with the real two-tab UIKit shell:
-  - **Dashboard Tab**: Diffable list grouped by pickup station (`Duoduo`, `Yixiaoji`, `Cainiao`, `SF Express`, `JD`, `Other`); large pickup code typography; tap to copy code; swipe to mark picked up / archive; quick-add bar with clipboard detection for pickup codes and pending tracking numbers; top quick action for Duoduo (`pinduoduo://com.xunmeng.pinduoduo/mdkd/package`) with copy-then-open support for pending tracking numbers.
-  - **Yixiaoji Tab**: Embedded persistent `WKWebView` for `https://ai.iepple.com` with reload/home/back controls and code-copy handoff from the dashboard.
-- **`Packages/Core`**: `Parcel` model, `PickupChannel` enum, local persistence store, deterministic `PickupParser` (SMS text, family chat text, carrier waybill detection), deduplication engine, and comprehensive Swift Testing coverage.
+- Replace the `App/Interface/Root/` and `AppTests/Interface/Root/` template placeholder with the real two-tab UIKit shell (`Parcels` + `Yixiaoji`):
+  - **Parcels Tab**: Diffable list with Pending / Picked Up segment switch; top Duoduo quick-action row (`pinduoduo://com.xunmeng.pinduoduo/mdkd/package`); non-empty `PickupChannel` sections (`Duoduo`, `Yixiaoji`, `Cainiao`, `SF Express`, `JD`, `Other`) with station names in secondary text; dedicated bottom **Waiting for Pickup Code** section for tracking-only parcels (tap copies tracking number and opens Duoduo); large tabular pickup code typography; tap to copy code (or copy + switch to Yixiaoji tab for Yixiaoji parcels); swipe to mark picked up / restore / delete; navigation bar `+` opens Quick Add sheet with `UIPasteControl`, live parser preview, tap-to-edit detail form, and manual entry from both initial and unparsed states; navigation bar gear opens Settings sheet to edit/test/reset the Duoduo deep link.
+  - **Yixiaoji Tab**: Embedded persistent `WKWebView` for `https://ai.iepple.com` with back/home/reload/stop controls, progress bar, offline error retry state, and 8-second auto-dismissing handoff banner for codes copied from Tab 1.
+- **`Packages/Core`**: `Parcel` model, `PickupChannel` enum, `ParcelStatus` (`pending` / `pickedUp`), atomic JSON `ParcelStore` with 30-day picked-up auto-pruning, deterministic `PickupParser` (SMS text, family chat text, carrier waybill detection), deduplication/merge engine, `DuoduoLinkValidator`, and comprehensive Swift Testing coverage.
 - **Verification**: `mise check` passes cleanly (`format-lint`, `validate-xcstrings`, `test-core`, `test-app`).
 
 ### Phase 2: Automated Ingestion

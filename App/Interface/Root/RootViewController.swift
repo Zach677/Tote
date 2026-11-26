@@ -1,31 +1,56 @@
 import UIKit
 
-final class RootViewController: UIViewController {
-    private let subtitleLabel = UILabel()
-
-    override func viewDidLoad() {
-        super.viewDidLoad()
-        view.backgroundColor = .systemBackground
-        configureLayout()
+final class RootViewController: UITabBarController {
+    enum TabIdentifier {
+        static let parcels = "parcels"
+        static let yixiaoji = "yixiaoji"
     }
-}
 
-private extension RootViewController {
-    func configureLayout() {
-        subtitleLabel.translatesAutoresizingMaskIntoConstraints = false
-        subtitleLabel.font = .preferredFont(forTextStyle: .body)
-        subtitleLabel.textColor = .secondaryLabel
-        subtitleLabel.textAlignment = .center
-        subtitleLabel.numberOfLines = 0
-        subtitleLabel.text = String(localized: "Programmatic UIKit starter is ready.")
+    let dependencies: AppDependencies
+    let dashboardViewController: DashboardViewController
+    let yixiaojiViewController: YixiaojiViewController
 
-        view.addSubview(subtitleLabel)
+    private let dashboardNavigationController: UINavigationController
+    private let yixiaojiNavigationController: UINavigationController
+    private lazy var parcelsTab = UITab(
+        title: String(localized: "Parcels"),
+        image: UIImage(systemName: "shippingbox"),
+        identifier: TabIdentifier.parcels
+    ) { [dashboardNavigationController] _ in
+        dashboardNavigationController
+    }
 
-        NSLayoutConstraint.activate([
-            subtitleLabel.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            subtitleLabel.centerYAnchor.constraint(equalTo: view.centerYAnchor),
-            subtitleLabel.leadingAnchor.constraint(greaterThanOrEqualTo: view.layoutMarginsGuide.leadingAnchor),
-            subtitleLabel.trailingAnchor.constraint(lessThanOrEqualTo: view.layoutMarginsGuide.trailingAnchor),
-        ])
+    private lazy var yixiaojiTab = UITab(
+        title: String(localized: "Yixiaoji"),
+        image: UIImage(systemName: "cabinet"),
+        identifier: TabIdentifier.yixiaoji
+    ) { [yixiaojiNavigationController] _ in
+        yixiaojiNavigationController
+    }
+
+    init(dependencies: AppDependencies = .live()) {
+        self.dependencies = dependencies
+        dashboardViewController = DashboardViewController(dependencies: dependencies)
+        yixiaojiViewController = YixiaojiViewController(dependencies: dependencies)
+        dashboardNavigationController = UINavigationController(rootViewController: dashboardViewController)
+        yixiaojiNavigationController = UINavigationController(rootViewController: yixiaojiViewController)
+        super.init(nibName: nil, bundle: nil)
+
+        dashboardViewController.onOpenYixiaoji = { [weak self] code in
+            self?.openYixiaoji(handoffCode: code)
+        }
+        tabs = [parcelsTab, yixiaojiTab]
+        selectedTab = parcelsTab
+    }
+
+    @available(*, unavailable)
+    required init?(coder _: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    func openYixiaoji(handoffCode: String) {
+        selectedTab = yixiaojiTab
+        yixiaojiViewController.loadViewIfNeeded()
+        yixiaojiViewController.showHandoff(code: handoffCode)
     }
 }
