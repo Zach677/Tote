@@ -413,6 +413,11 @@ struct PickupParserTests {
             "Can you get the blue box for me later? Thanks!",
             "2026",
             "Pick up in 3-day window for Phase-1.",
+            "86-138****0000",
+            "+86-138****0000",
+            "138****0000",
+            "86-13800000000",
+            "订单编号 2690000000000000",
         ]
     )
     func rejectsFalsePositives(input: String) {
@@ -543,5 +548,56 @@ struct PickupParserTests {
         )
         #expect(cainiaoStation.channel == .station)
         #expect(cainiaoStation.pickupCode == "4-2-1048")
+    }
+
+    @Test("Parses Taobao and JD order-detail screenshot OCR without masked-phone or price noise")
+    func parsesEcommerceScreenshotOCRCleanly() throws {
+        let taobaoOCR = """
+        23:47
+        已放入代收点
+        距收货地1米
+        中通快递 79000000000000 复制 打电话
+        待取件 11-28 16:06
+        快件已送达【代收点-Demo Duoduo Station，电话：13800000000】，取件地址：Demo Building 24...展开
+        Demo Duoduo Station
+        Demo Building 24
+        取件码 26-4-0000 复制
+        找人帮取
+        查看更多物流明细
+        送至 Demo Campus
+        收件人 86-138****0000
+        旗舰店 ¥18.91 ¥24.9
+        """
+
+        let taobaoDrafts = parser.parse(taobaoOCR)
+        #expect(taobaoDrafts.count == 1)
+        let taobao = try #require(taobaoDrafts.first)
+        #expect(taobao.channel == .station)
+        #expect(taobao.pickupCode == "26-4-0000")
+        #expect(taobao.trackingNumber == "79000000000000")
+        #expect(taobao.stationLabel == "Demo Duoduo Station")
+
+        let jdOCR = """
+        23:48
+        请上门自提
+        取件码：D1-0000 复制
+        等待自提 导航
+        自提码：D1-0000
+        待取件
+        Demo Campus Service Station · 您的订单在京东【Demo Campus Service Station】上架完成，请上门自提
+        Demo Campus
+        收件人 138****0000
+        京东超市 到手¥ 10.89
+        实付款 共减¥1.89 合计¥10.89
+        订单编号 2690000000000000 复制
+        """
+
+        let jdDrafts = parser.parse(jdOCR)
+        #expect(jdDrafts.count == 1)
+        let jd = try #require(jdDrafts.first)
+        #expect(jd.channel == .jd)
+        #expect(jd.pickupCode == "D1-0000")
+        #expect(jd.trackingNumber.isEmpty)
+        #expect(jd.stationLabel == "Demo Campus Service Station")
     }
 }

@@ -729,16 +729,47 @@ private extension PickupParser {
     func cleanStationCandidate(_ raw: String) -> String {
         let trimSet = CharacterSet.whitespacesAndNewlines
             .union(CharacterSet(charactersIn: ":：,，.。;；!！?？【】[]()（）\"'“”「」"))
-        return raw.trimmingCharacters(in: trimSet)
+        var cleaned = raw.trimmingCharacters(in: trimSet)
+
+        // Strip trailing phone/contact clauses embedded inside bracketed station names
+        // (e.g. "代收点-Demo Station，电话：13800000000").
+        let fullRange = NSRange(cleaned.startIndex..., in: cleaned)
+        cleaned = Patterns.trailingStationContact.stringByReplacingMatches(
+            in: cleaned,
+            options: [],
+            range: fullRange,
+            withTemplate: ""
+        )
+
+        // Strip generic location tag prefixes such as "代收点-" or "(代收点)".
+        let prefixRange = NSRange(cleaned.startIndex..., in: cleaned)
+        cleaned = Patterns.leadingStationTag.stringByReplacingMatches(
+            in: cleaned,
+            options: [],
+            range: prefixRange,
+            withTemplate: ""
+        )
+
+        return cleaned.trimmingCharacters(in: trimSet)
     }
 
     func isValidStationLabel(_ candidate: String) -> Bool {
         guard candidate.count >= 2, candidate.count <= 40 else { return false }
         let lowered = candidate.lowercased()
 
+        let blockedExactLabels: Set = [
+            "代收点", "自提点", "取件点", "快递点", "驿站",
+            "快递柜", "智能柜", "自提柜", "服务站", "收货地", "地址",
+        ]
+        if blockedExactLabels.contains(candidate) {
+            return false
+        }
+
         let blockedSubstrings = [
-            "取件码", "取货码", "提货码", "开柜码", "核销码", "运单号", "单号",
+            "取件码", "取货码", "提货码", "自提码", "开柜码", "核销码", "运单号", "单号",
             "pickup code", "tracking", "http://", "https://", "时间",
+            "¥", "￥", "$", "****", "到手", "实付", "合计", "包邮",
+            "退货", "退款", "发票", "客服", "好评", "满减", "优惠券", "电话", "联系",
         ]
         if blockedSubstrings.contains(where: { lowered.contains($0) }) {
             return false
@@ -900,12 +931,18 @@ private enum Patterns {
         // Labeled phone / hotline / last-4 digits
         makeRegex(#"(?:电话|联系|致电|详询|客服|热线|手机|tel|phone)[\s:：]*[+\d][\d-\s]{6,16}\d"#, options: .caseInsensitive),
         makeRegex(#"(?:手机)?尾号[\s:：为是]*\d{4}"#),
+        // Masked / redacted mobile numbers (e.g. 86-138****0000, +86 138****0000, 138****0000, 138-****-0000)
+        makeRegex(#"(?<![A-Za-z0-9-])(?:\+?86[\s-]?)?1[3-9]\d[\s-]?\*{2,6}[\s-]?\d{2,4}(?![A-Za-z0-9-])"#),
+        // International-prefixed mobile numbers (e.g. +86-13800000000, 86-13800000000)
+        makeRegex(#"(?<![A-Za-z0-9-])\+?86[\s-]1[3-9]\d{9}(?![A-Za-z0-9-])"#),
         // 11-digit mobile numbers (plain and hyphenated)
         makeRegex(#"(?<![A-Za-z0-9-])1[3-9]\d{9}(?![A-Za-z0-9-])"#),
         makeRegex(#"(?<![A-Za-z0-9-])1[3-9]\d-\d{4}-\d{4}(?![A-Za-z0-9-])"#),
         // 400/800 service hotlines and domestic landlines
         makeRegex(#"(?<![A-Za-z0-9-])[48]00-\d{3}-\d{4}(?![A-Za-z0-9-])"#),
         makeRegex(#"(?<![A-Za-z0-9-])0\d{2,3}-\d{7,8}(?![A-Za-z0-9-])"#),
+        // E-commerce order and payment IDs (never tracking numbers)
+        makeRegex(#"(?:订单编号|订单号|交易号|交易单号|商户单号|支付单号)[\s:：为是#]*[A-Za-z0-9-]{8,30}"#),
     ]
 
     static let mobilePhone = makeRegex(#"^1[3-9]\d{9}$"#)
@@ -923,7 +960,7 @@ private enum Patterns {
     static let numericTracking = makeRegex(#"(?<![A-Za-z0-9-])\d{12,16}(?![A-Za-z0-9-])"#)
 
     static let labeledCodePrefix = makeRegex(
-        #"(?:凭取件码|取件码|取货码|凭码|提货码|开柜码|开箱码|核销码|领取码|\b(?:pickup|pick-up|collection|locker)\s*code\b|\bcode\b)"#,
+        #"(?:凭取件码|取件码|取货码|自提码|凭码|提货码|开柜码|开箱码|核销码|领取码|\b(?:pickup|pick-up|collection|locker)\s*code\b|\bcode\b)"#,
         options: .caseInsensitive
     )
 
@@ -933,7 +970,7 @@ private enum Patterns {
 
     static let pingActionCode = makeRegex(#"凭\s*([A-Za-z0-9]{1,8}(?:-[A-Za-z0-9]{1,8}){0,3})\s*(?:取件|取货|开柜|开箱|领取|提货)"#)
 
-    static let hyphenatedCode = makeRegex(#"(?<![A-Za-z0-9-])[A-Za-z0-9]{1,5}(?:-[A-Za-z0-9]{1,6}){1,3}(?![A-Za-z0-9-])"#)
+    static let hyphenatedCode = makeRegex(#"(?<![A-Za-z0-9-*])[A-Za-z0-9]{1,5}(?:-[A-Za-z0-9]{1,6}){1,3}(?![A-Za-z0-9-*])"#)
     static let twoPartFirst = makeRegex(#"^(?:[A-Za-z]{1,2}\d{0,3}|\d{1,4})$"#)
     static let twoPartSecond = makeRegex(#"^(?:\d{3,6}|[A-Za-z]\d{2,5})$"#)
     static let multiPartSegment = makeRegex(#"^(?:[A-Za-z]{0,2}\d{1,5}|\d{1,4}[A-Za-z]?)$"#)
@@ -953,13 +990,19 @@ private enum Patterns {
         options: .caseInsensitive
     )
 
-    private static let chineseStationCaptureAndTerminator = #"(?:[（(][^）)\n]{1,10}[）)]\s*)?[【\[]?([^\n，,。；;！!？?（(\[【\]】]+?)[】\]]?(?=\s*(?:领取|取件|取货|取走|尽早取|尽快取|及时取|请及时取|取包裹|取快递|开柜|开箱|自提|凭|取件码|取货码|提货码|开柜码|核销码|已经等很久|已等|等您|滞留|的包裹|[，,。；;！!？?（(\n]|$))"#
+    static let trailingStationContact = makeRegex(#"[\s,，;；]*(?:电话|联系|致电|详询|手机)[\s:：]*.*$"#)
+    static let leadingStationTag = makeRegex(#"^(?:[（(]\s*(?:代收点|自提点|取件点)\s*[）)]\s*|(?:代收点|自提点|取件点)[\s\-:：]+)"#)
+
+    private static let chineseStationCaptureAndTerminator = #"(?:[（(][^）)\n]{1,10}[）)]\s*)?[【\[]?([^\n，,。；;！!？?（(\[【\]】]+?)[】\]]?(?=\s*(?:上架|领取|取件|取货|取走|尽早取|尽快取|及时取|请及时取|取包裹|取快递|开柜|开箱|自提|凭|取件码|取货码|自提码|提货码|开柜码|核销码|已经等很久|已等|等您|滞留|的包裹|[，,。；;！!？?（(\n]|$))"#
 
     static let stationPatterns: [NSRegularExpression] = [
-        // High-confidence Chinese arrival verbs first so generic "在3天内..." does not shadow "到<Station>"
+        // Highest-confidence bracketed station clauses such as
+        // "快件已送达【代收点-Demo Station，电话：...】" or "在京东【Demo Campus Service Station】上架完成"
+        makeRegex(#"(?:已到达|已送达|已投放至|已存放至|已存入|已入柜|已放入|已放至|到达|送达|在(?:京东|顺丰|菜鸟|多多)?)\s*【([^】\n]{2,40})】"#),
+        // High-confidence Chinese arrival verbs so generic "在3天内..." does not shadow "到<Station>"
         makeRegex(#"(?:已到达|已送达|已投放至|已存放至|已存入|已入柜|已放入|已放至|已入|已到|到达|送达|投放至|存放至|存入|放至|前往|请到|请至)\s*"# + chineseStationCaptureAndTerminator),
-        // Fallback Chinese location prepositions: skip temporal clauses like "在3天内..." so "到<Station>" still matches
-        makeRegex(#"(?:到|至|在)(?!\s*(?:\d+\s*(?:天|日|小时|分钟|月)|(?:19|20)\d{2}[-/.年]|今[天日]|明[天日]))\s*"# + chineseStationCaptureAndTerminator),
+        // Fallback Chinese location prepositions: skip temporal clauses and compound verbs/prices ("到手¥", "收到", "正在", "至少")
+        makeRegex(#"(?<!收)(?<!看)(?<!找)(?<!回)(?<!正)(?<!所)(?:到|至|在)(?!\s*(?:\d+\s*(?:天|日|小时|分钟|月)|(?:19|20)\d{2}[-/.年]|今[天日]|明[天日]|手(?:价|\s*[¥￥$])|线|少|此))\s*"# + chineseStationCaptureAndTerminator),
         // English station clauses: "arrived at North Pickup Point", "ready at Demo Locker"
         makeRegex(#"\b(?:arrived at|ready at|delivered to|stored at|available at|at)\s+([A-Za-z0-9][A-Za-z0-9\s#-]{1,39}?)(?=\s*(?:[.,;!\n\(]|\b(?:pickup|pick-up|locker|collection)?\s*code\b|\bwith\b|$))"#, options: .caseInsensitive),
     ]
