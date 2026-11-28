@@ -3,6 +3,7 @@ import Core
 import Foundation
 import Testing
 
+@Suite(.serialized)
 struct YixiaojiClientTests {
     @Test
     func liveClientAuthenticatesSyncsAndUnlocksTwoStepOverStubbedTransport() async throws {
@@ -57,10 +58,11 @@ struct YixiaojiClientTests {
         #expect(session.defaultSiteName == "Sample Locker A1")
         #expect(sessionStore.session == session)
 
-        let pending = try await client.fetchPendingParcels()
-        #expect(pending.count == 1)
-        #expect(pending[0].pickupCode == "05240000")
-        #expect(pending[0].cabinetMAC == "MAC-A1")
+        let pendingBatch = try await client.fetchPendingParcels()
+        #expect(!pendingBatch.isTruncated)
+        #expect(pendingBatch.parcels.count == 1)
+        #expect(pendingBatch.parcels[0].pickupCode == "05240000")
+        #expect(pendingBatch.parcels[0].cabinetMAC == "MAC-A1")
 
         let unlockResult = try await client.unlockParcel(
             code: "05240000",
@@ -78,6 +80,106 @@ struct YixiaojiClientTests {
 
         let checkRequest = try #require(requests.first { $0.path == "/api/dev/checkOrder" })
         #expect(checkRequest.query.contains("order_sn=ORD-77"))
+    }
+
+    @Test
+    func liveClientFailsClosedWithoutCabinetAndSurfacesUnconfirmedCheckOrderAndStorageErrors() async throws {
+        let session = YixiaojiSession(uid: "1024", token: "tok-1", username: "demo")
+        let sessionStore = InMemoryYixiaojiSessionStore(session: session)
+        let config = URLSessionConfiguration.ephemeral
+        config.protocolClasses = [StubYixiaojiURLProtocol.self]
+        let urlSession = URLSession(configuration: config)
+
+        let client = LiveYixiaojiClient(sessionStore: sessionStore, urlSession: urlSession)
+
+        // 1. Fail-closed before network when neither MAC nor siteID is supplied.
+        await #expect(throws: YixiaojiAPIError.missingCabinetSelection) {
+            try await client.unlockParcel(code: "05240000", cabinetMAC: nil, siteID: nil)
+        }
+
+        // 2. tackLockOrder succeeds but checkOrder fails -> unlockUnconfirmed (never silent .opened).
+        StubYixiaojiURLProtocol.setHandler { request in
+            let path = request.url?.path ?? ""
+            switch path {
+            case "/api/dev/tackLockOrder":
+                return (200, Data(#"{"code":1,"msg":"Submitted","data":{"order_sn":"ORD-88"}}"#.utf8))
+            case "/api/dev/checkOrder":
+                return (200, Data(#"{"code":0,"msg":"Pending confirmation"}"#.utf8))
+            case "/index/wechat/h5_login":
+                return (200, Data(#"{"code":1,"data":{"uid":1024,"token":"tok-2"}}"#.utf8))
+            default:
+                return (404, Data())
+            }
+        }
+        defer { StubYixiaojiURLProtocol.setHandler(nil) }
+
+        await #expect(throws: YixiaojiAPIError.unlockUnconfirmed(message: "Pending confirmation", orderSN: "ORD-88")) {
+            try await client.unlockParcel(code: "05240000", cabinetMAC: "MAC-A1", siteID: "42")
+        }
+
+        // 3. Keychain save failure propagates out of login.
+        sessionStore.saveError = YixiaojiAPIError.storageError("Keychain denied")
+        await #expect(throws: YixiaojiAPIError.storageError("Keychain denied")) {
+            try await client.login(username: "demo", password: "secret")
+        }
+
+        // 4. Logout clears cached cabinet selection.
+        sessionStore.lastSelectedCabinet = YixiaojiCabinet(id: "42", name: "Sample Locker A1")
+        client.logout()
+        #expect(sessionStore.session == nil)
+        #expect(sessionStore.lastSelectedCabinet == nil)
+    }
+
+    @Test
+    func liveClientTreatsEmptyOrderSNAsUnconfirmedMarksTruncatedSyncAndRethrowsCancellation() async throws {
+        let session = YixiaojiSession(uid: "1024", token: "tok-1", username: "demo")
+        let sessionStore = InMemoryYixiaojiSessionStore(session: session)
+        let config = URLSessionConfiguration.ephemeral
+        config.protocolClasses = [StubYixiaojiURLProtocol.self]
+        let urlSession = URLSession(configuration: config)
+        let client = LiveYixiaojiClient(sessionStore: sessionStore, urlSession: urlSession)
+
+        // 1. Empty order_sn must fail closed as unlockUnconfirmed rather than reporting .opened.
+        StubYixiaojiURLProtocol.setHandler { request in
+            switch request.url?.path ?? "" {
+            case "/api/dev/tackLockOrder":
+                (200, Data(#"{"code":1,"msg":"Submitted without order id","data":{}}"#.utf8))
+            default:
+                (404, Data())
+            }
+        }
+        defer { StubYixiaojiURLProtocol.setHandler(nil) }
+
+        await #expect(throws: YixiaojiAPIError.unlockUnconfirmed(message: "Submitted without order id", orderSN: "")) {
+            try await client.unlockParcel(code: "05240000", cabinetMAC: "MAC-A1", siteID: "42")
+        }
+
+        // 2. Five full pages of 10 pending parcels mark the sync batch as truncated.
+        StubYixiaojiURLProtocol.setHandler { request in
+            guard request.url?.path == "/api/wechat/search" else {
+                return (404, Data())
+            }
+            let components = request.url.flatMap { URLComponents(url: $0, resolvingAgainstBaseURL: false) }
+            let page = Int(components?.queryItems?.first(where: { $0.name == "page" })?.value ?? "1") ?? 1
+            let items = (0 ..< 10).map { index in
+                let code = String(format: "%02d0000%02d", page, index)
+                return #"{"take_code":"\#(code)","order_sn":"YT\#(page)\#(index)","address":"Sample Locker A1","bind_mac":"MAC-A1","express_uids":"42","is_get":0,"is_open":0}"#
+            }
+            return (200, Data(#"{"code":1,"data":[\#(items.joined(separator: ","))]}"#.utf8))
+        }
+
+        let truncatedBatch = try await client.fetchPendingParcels()
+        #expect(truncatedBatch.isTruncated)
+        #expect(truncatedBatch.parcels.count == 50)
+
+        // 3. Transport cancellation rethrows CancellationError instead of YixiaojiAPIError.networkError.
+        StubYixiaojiURLProtocol.setHandler { _ in
+            throw URLError(.cancelled)
+        }
+
+        await #expect(throws: CancellationError.self) {
+            try await client.fetchCabinets()
+        }
     }
 }
 

@@ -107,6 +107,16 @@ public struct YixiaojiRemoteParcel: Hashable, Sendable {
     }
 }
 
+public struct YixiaojiPendingSyncBatch: Equatable, Sendable {
+    public var parcels: [YixiaojiRemoteParcel]
+    public var isTruncated: Bool
+
+    public init(parcels: [YixiaojiRemoteParcel], isTruncated: Bool = false) {
+        self.parcels = parcels
+        self.isTruncated = isTruncated
+    }
+}
+
 public enum YixiaojiUnlockResult: Equatable, Sendable {
     case opened(compartment: String, message: String, orderSN: String)
     case paymentRequired(message: String, amount: String, overdueDays: String)
@@ -114,8 +124,11 @@ public enum YixiaojiUnlockResult: Equatable, Sendable {
 
 public enum YixiaojiAPIError: Error, Equatable, Sendable {
     case notSignedIn
+    case missingCabinetSelection
     case invalidCredentials(String)
     case sessionExpired(String)
+    case unlockUnconfirmed(message: String, orderSN: String)
+    case storageError(String)
     case serverError(String)
     case invalidResponse
     case networkError(String)

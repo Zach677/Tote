@@ -134,23 +134,28 @@ final class SettingsViewController: UIViewController {
         }
 
         do {
-            let remote = try await dependencies.yixiaoji.fetchPendingParcels()
-            let result = try dependencies.parcelStore.syncSyncedParcels(remote.map { $0.makeDraft() })
-            if !result.added.isEmpty || !result.updated.isEmpty {
+            let batch = try await dependencies.yixiaoji.fetchPendingParcels()
+            let result = try dependencies.parcelStore.syncSyncedParcels(
+                batch.parcels.map { $0.makeDraft() },
+                markMissingSyncedLockerParcelsPickedUp: !batch.isTruncated
+            )
+            let totalChanged = result.added.count + result.updated.count + result.markedPickedUpCount
+            if totalChanged > 0 {
                 onParcelsChanged()
-                let totalChanged = result.added.count + result.updated.count
                 lastSyncSummary = String(localized: "Synced \(totalChanged) locker parcels.")
             } else {
                 lastSyncSummary = String(localized: "Locker parcels are up to date.")
             }
             return result
+        } catch is CancellationError {
+            return nil
         } catch let apiError as YixiaojiAPIError {
             switch apiError {
             case .sessionExpired, .notSignedIn:
                 lastSyncSummary = String(localized: "Yixiaoji session expired. Please sign in again.")
-            case let .serverError(message), let .invalidCredentials(message):
+            case let .serverError(message), let .invalidCredentials(message), let .storageError(message):
                 lastSyncSummary = message.isEmpty ? String(localized: "Couldn’t sync Yixiaoji parcels.") : message
-            case .invalidResponse, .networkError:
+            case .missingCabinetSelection, .unlockUnconfirmed, .invalidResponse, .networkError:
                 lastSyncSummary = String(localized: "Couldn’t reach Yixiaoji. Check your connection.")
             }
             return nil

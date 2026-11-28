@@ -6,7 +6,7 @@ protocol YixiaojiSessionStoring: AnyObject {
     var session: YixiaojiSession? { get }
     var lastSelectedCabinet: YixiaojiCabinet? { get set }
 
-    func saveSession(_ session: YixiaojiSession)
+    func saveSession(_ session: YixiaojiSession) throws
     func clearSession()
 }
 
@@ -57,8 +57,13 @@ final class KeychainYixiaojiSessionStore: YixiaojiSessionStoring {
         }
     }
 
-    func saveSession(_ session: YixiaojiSession) {
-        guard let data = try? JSONEncoder().encode(session) else { return }
+    func saveSession(_ session: YixiaojiSession) throws {
+        let data: Data
+        do {
+            data = try JSONEncoder().encode(session)
+        } catch {
+            throw YixiaojiAPIError.storageError("Failed to encode session")
+        }
 
         let baseQuery: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
@@ -71,7 +76,10 @@ final class KeychainYixiaojiSessionStore: YixiaojiSessionStoring {
         var addQuery = baseQuery
         addQuery[kSecValueData as String] = data
         addQuery[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
-        SecItemAdd(addQuery as CFDictionary, nil)
+        let status = SecItemAdd(addQuery as CFDictionary, nil)
+        guard status == errSecSuccess else {
+            throw YixiaojiAPIError.storageError("Keychain write failed (\(status))")
+        }
     }
 
     func clearSession() {
@@ -81,5 +89,6 @@ final class KeychainYixiaojiSessionStore: YixiaojiSessionStoring {
             kSecAttrAccount as String: Constants.account,
         ]
         SecItemDelete(query as CFDictionary)
+        lastSelectedCabinet = nil
     }
 }

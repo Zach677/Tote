@@ -39,18 +39,23 @@ final class InMemorySettingsStore: SettingsStoring {
 final class InMemoryYixiaojiSessionStore: YixiaojiSessionStoring {
     var session: YixiaojiSession?
     var lastSelectedCabinet: YixiaojiCabinet?
+    var saveError: (any Error)?
 
     init(session: YixiaojiSession? = nil, lastSelectedCabinet: YixiaojiCabinet? = nil) {
         self.session = session
         self.lastSelectedCabinet = lastSelectedCabinet
     }
 
-    func saveSession(_ session: YixiaojiSession) {
+    func saveSession(_ session: YixiaojiSession) throws {
+        if let saveError {
+            throw saveError
+        }
         self.session = session
     }
 
     func clearSession() {
         session = nil
+        lastSelectedCabinet = nil
     }
 }
 
@@ -67,8 +72,11 @@ final class FakeYixiaojiService: YixiaojiServicing {
     var loginResult: Result<YixiaojiSession, any Error> = .success(
         YixiaojiSession(uid: "1001", token: "demo-token", username: "demo", defaultSiteID: "42", defaultSiteName: "Sample Locker A1")
     )
-    var pendingParcelsResult: Result<[YixiaojiRemoteParcel], any Error> = .success([])
+    var pendingParcelsResult: Result<YixiaojiPendingSyncBatch, any Error> = .success(
+        YixiaojiPendingSyncBatch(parcels: [], isTruncated: false)
+    )
     var searchResultsByKeyword: [String: [YixiaojiRemoteParcel]] = [:]
+    var searchDelay: Duration?
     var cabinetsResult: Result<[YixiaojiCabinet], any Error> = .success([])
     var unlockResult: Result<YixiaojiUnlockResult, any Error> = .success(
         .opened(compartment: "28", message: "Opened", orderSN: "ORD-001")
@@ -94,9 +102,10 @@ final class FakeYixiaojiService: YixiaojiServicing {
     func logout() {
         logoutCount += 1
         currentSession = nil
+        lastSelectedCabinet = nil
     }
 
-    func fetchPendingParcels() async throws -> [YixiaojiRemoteParcel] {
+    func fetchPendingParcels() async throws -> YixiaojiPendingSyncBatch {
         fetchPendingCount += 1
         guard currentSession != nil else {
             throw YixiaojiAPIError.notSignedIn
@@ -108,6 +117,9 @@ final class FakeYixiaojiService: YixiaojiServicing {
         searchedKeywords.append(keyword)
         guard currentSession != nil else {
             throw YixiaojiAPIError.notSignedIn
+        }
+        if let searchDelay {
+            try await Task.sleep(for: searchDelay)
         }
         return searchResultsByKeyword[keyword] ?? []
     }

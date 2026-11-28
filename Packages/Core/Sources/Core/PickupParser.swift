@@ -253,10 +253,11 @@ private extension PickupParser {
 
         if codeMatches.count == 1 {
             let trackingValue = trackingMatches.first?.value ?? ""
-            let channel = explicitChannel
-                ?? inferChannel(fromTrackingNumber: trackingValue)
-                ?? inferChannel(fromPickupCode: codeMatches[0].value)
-                ?? .other
+            let channel = resolveChannel(
+                explicitChannel: explicitChannel,
+                trackingNumber: trackingValue,
+                pickupCode: codeMatches[0].value
+            )
             return [
                 ParsedParcelDraft(
                     pickupCode: codeMatches[0].value,
@@ -270,10 +271,11 @@ private extension PickupParser {
 
         if trackingMatches.count == codeMatches.count {
             return zip(codeMatches, trackingMatches).map { code, tracking in
-                let channel = explicitChannel
-                    ?? inferChannel(fromTrackingNumber: tracking.value)
-                    ?? inferChannel(fromPickupCode: code.value)
-                    ?? .other
+                let channel = resolveChannel(
+                    explicitChannel: explicitChannel,
+                    trackingNumber: tracking.value,
+                    pickupCode: code.value
+                )
                 return ParsedParcelDraft(
                     pickupCode: code.value,
                     trackingNumber: tracking.value,
@@ -286,10 +288,11 @@ private extension PickupParser {
 
         return codeMatches.enumerated().map { index, code in
             let trackingValue = (index == 0 && trackingMatches.count == 1) ? trackingMatches[0].value : ""
-            let channel = explicitChannel
-                ?? inferChannel(fromTrackingNumber: trackingValue)
-                ?? inferChannel(fromPickupCode: code.value)
-                ?? .other
+            let channel = resolveChannel(
+                explicitChannel: explicitChannel,
+                trackingNumber: trackingValue,
+                pickupCode: code.value
+            )
             return ParsedParcelDraft(
                 pickupCode: code.value,
                 trackingNumber: trackingValue,
@@ -371,7 +374,29 @@ private extension PickupParser {
         return nil
     }
 
-    func inferChannel(fromPickupCode pickupCode: String) -> PickupChannel? {
+    func resolveChannel(
+        explicitChannel: PickupChannel?,
+        trackingNumber: String,
+        pickupCode: String
+    ) -> PickupChannel {
+        if let explicitChannel {
+            return explicitChannel
+        }
+        // Physical pickup-point shapes (3-part shelf code, 8-digit locker code) outrank
+        // carrier tracking prefixes so an SF/JD parcel stored at a station or locker groups there.
+        if let physicalPoint = inferPhysicalPickupPoint(fromPickupCode: pickupCode) {
+            return physicalPoint
+        }
+        if let trackingChannel = inferChannel(fromTrackingNumber: trackingNumber) {
+            return trackingChannel
+        }
+        if let courierCodeChannel = inferCourierChannel(fromPickupCode: pickupCode) {
+            return courierCodeChannel
+        }
+        return .other
+    }
+
+    func inferPhysicalPickupPoint(fromPickupCode pickupCode: String) -> PickupChannel? {
         let cleaned = ParcelNormalization.normalizePickupCode(pickupCode)
         guard !cleaned.isEmpty else { return nil }
 
@@ -381,6 +406,13 @@ private extension PickupParser {
         if matchesWhole(cleaned, regex: Patterns.lockerEightDigitCode) {
             return .locker
         }
+        return nil
+    }
+
+    func inferCourierChannel(fromPickupCode pickupCode: String) -> PickupChannel? {
+        let cleaned = ParcelNormalization.normalizePickupCode(pickupCode)
+        guard !cleaned.isEmpty else { return nil }
+
         if matchesWhole(cleaned, regex: Patterns.jdTwoPartCode) {
             return .jd
         }

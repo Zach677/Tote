@@ -7,7 +7,7 @@ protocol YixiaojiServicing: AnyObject {
 
     func login(username: String, password: String) async throws -> YixiaojiSession
     func logout()
-    func fetchPendingParcels() async throws -> [YixiaojiRemoteParcel]
+    func fetchPendingParcels() async throws -> YixiaojiPendingSyncBatch
     func searchParcels(keyword: String) async throws -> [YixiaojiRemoteParcel]
     func fetchCabinets(keyword: String) async throws -> [YixiaojiCabinet]
     func unlockParcel(code: String, cabinetMAC: String?, siteID: String?) async throws -> YixiaojiUnlockResult
@@ -22,6 +22,7 @@ final class LiveYixiaojiClient: YixiaojiServicing {
         static let localizationList = "/api/express/getLocalizationList"
         static let tackLockOrder = "/api/dev/tackLockOrder"
         static let checkOrder = "/api/dev/checkOrder"
+        static let pageSize = 10
         static let maxPendingPages = 5
     }
 
@@ -66,7 +67,7 @@ final class LiveYixiaojiClient: YixiaojiServicing {
             session = enriched
         }
 
-        sessionStore.saveSession(session)
+        try sessionStore.saveSession(session)
         return session
     }
 
@@ -74,9 +75,10 @@ final class LiveYixiaojiClient: YixiaojiServicing {
         sessionStore.clearSession()
     }
 
-    func fetchPendingParcels() async throws -> [YixiaojiRemoteParcel] {
+    func fetchPendingParcels() async throws -> YixiaojiPendingSyncBatch {
         let session = try requireSession()
         var collected: [YixiaojiRemoteParcel] = []
+        var isTruncated = false
 
         for page in 1 ... Endpoints.maxPendingPages {
             let queryItems: [URLQueryItem] = [
@@ -90,12 +92,16 @@ final class LiveYixiaojiClient: YixiaojiServicing {
             let pageItems = try YixiaojiResponseParser.parseSearchResponse(data)
             collected.append(contentsOf: pageItems.filter { !$0.isPickedUp })
 
-            if pageItems.count < 10 {
+            if pageItems.count < Endpoints.pageSize {
+                isTruncated = false
                 break
+            }
+            if page == Endpoints.maxPendingPages {
+                isTruncated = true
             }
         }
 
-        return collected
+        return YixiaojiPendingSyncBatch(parcels: collected, isTruncated: isTruncated)
     }
 
     func searchParcels(keyword: String) async throws -> [YixiaojiRemoteParcel] {
@@ -135,17 +141,20 @@ final class LiveYixiaojiClient: YixiaojiServicing {
             throw YixiaojiAPIError.serverError("")
         }
 
+        let cleanMAC = YixiaojiResponseParser.cleanMAC(cabinetMAC ?? "")
+        let cleanSiteID = YixiaojiResponseParser.cleanSiteID(siteID ?? "")
+        // Fail closed: never send an unlock request without an explicit locker target.
+        guard !cleanMAC.isEmpty || !cleanSiteID.isEmpty else {
+            throw YixiaojiAPIError.missingCabinetSelection
+        }
+
         var queryItems: [URLQueryItem] = [
             URLQueryItem(name: "keyword", value: trimmedCode),
             URLQueryItem(name: "user_id", value: session.uid),
         ]
-
-        let cleanMAC = YixiaojiResponseParser.cleanMAC(cabinetMAC ?? "")
         if !cleanMAC.isEmpty {
             queryItems.append(URLQueryItem(name: "mac", value: cleanMAC))
         }
-
-        let cleanSiteID = YixiaojiResponseParser.cleanSiteID(siteID ?? "")
         if !cleanSiteID.isEmpty {
             queryItems.append(URLQueryItem(name: "express_uids", value: cleanSiteID))
         }
@@ -164,19 +173,34 @@ final class LiveYixiaojiClient: YixiaojiServicing {
 
         case let .submitted(orderSN, message):
             guard !orderSN.isEmpty else {
-                return .opened(compartment: "", message: message, orderSN: "")
+                throw YixiaojiAPIError.unlockUnconfirmed(message: message, orderSN: "")
             }
-            let checkData = try await sendGet(
-                path: Endpoints.checkOrder,
-                queryItems: [URLQueryItem(name: "order_sn", value: orderSN)],
-                token: session.token,
-                contentType: "application/x-www-form-urlencoded; charset=UTF-8"
-            )
-            return try YixiaojiResponseParser.parseCheckOrderResponse(
-                checkData,
-                fallbackOrderSN: orderSN,
-                fallbackMessage: message
-            )
+
+            do {
+                let checkData = try await sendGet(
+                    path: Endpoints.checkOrder,
+                    queryItems: [URLQueryItem(name: "order_sn", value: orderSN)],
+                    token: session.token,
+                    contentType: "application/x-www-form-urlencoded; charset=UTF-8"
+                )
+                return try YixiaojiResponseParser.parseCheckOrderResponse(
+                    checkData,
+                    fallbackOrderSN: orderSN,
+                    fallbackMessage: message
+                )
+            } catch is CancellationError {
+                throw CancellationError()
+            } catch let apiError as YixiaojiAPIError {
+                let detail = switch apiError {
+                case let .serverError(msg), let .sessionExpired(msg), let .networkError(msg):
+                    msg.isEmpty ? message : msg
+                default:
+                    message
+                }
+                throw YixiaojiAPIError.unlockUnconfirmed(message: detail, orderSN: orderSN)
+            } catch {
+                throw YixiaojiAPIError.unlockUnconfirmed(message: message, orderSN: orderSN)
+            }
         }
     }
 }
@@ -242,6 +266,10 @@ private extension LiveYixiaojiClient {
         let response: URLResponse
         do {
             (data, response) = try await urlSession.data(for: request)
+        } catch is CancellationError {
+            throw CancellationError()
+        } catch let urlError as URLError where urlError.code == .cancelled {
+            throw CancellationError()
         } catch {
             throw YixiaojiAPIError.networkError(error.localizedDescription)
         }

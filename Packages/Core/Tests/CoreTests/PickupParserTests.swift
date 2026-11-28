@@ -293,6 +293,13 @@ struct PickupParserTests {
         let multiBareList = parser.parse("12-3-0000\n05240000\nA3-1048\n4821")
         #expect(multiBareList.map(\.channel) == [.station, .locker, .jd, .sfExpress])
 
+        // Physical pickup-point code shapes outrank courier tracking prefixes when no explicit brand is stated.
+        let sfWaybillWithShelfCode = try #require(parser.parse("SF0000000000000 取件码12-3-4567").first)
+        #expect(sfWaybillWithShelfCode.channel == .station)
+
+        let jdWaybillWithLockerCode = try #require(parser.parse("JD0000000000000 取件码05240000").first)
+        #expect(jdWaybillWithLockerCode.channel == .locker)
+
         let shorthands: [(input: String, expectedChannel: PickupChannel)] = [
             ("宜小集 884210", .locker),
             ("快递柜 884210", .locker),

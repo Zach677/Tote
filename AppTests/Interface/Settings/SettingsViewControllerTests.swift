@@ -91,15 +91,20 @@ struct SettingsViewControllerTests {
         let env = TestEnvironment(yixiaojiSession: session)
         defer { env.cleanup() }
 
-        env.yixiaoji.pendingParcelsResult = .success([
-            YixiaojiRemoteParcel(
-                pickupCode: "05240000",
-                trackingNumber: "YT0000000000000",
-                cabinetName: "Sample Locker A1",
-                cabinetMAC: "MAC-A1",
-                siteID: "42"
-            ),
-        ])
+        env.yixiaoji.pendingParcelsResult = .success(
+            YixiaojiPendingSyncBatch(
+                parcels: [
+                    YixiaojiRemoteParcel(
+                        pickupCode: "05240000",
+                        trackingNumber: "YT0000000000000",
+                        cabinetName: "Sample Locker A1",
+                        cabinetMAC: "MAC-A1",
+                        siteID: "42"
+                    ),
+                ],
+                isTruncated: false
+            )
+        )
 
         var parcelsChangedCount = 0
         let controller = SettingsViewController(dependencies: env.dependencies)

@@ -47,10 +47,15 @@ extension DashboardViewController {
         }
 
         do {
-            let remote = try await dependencies.yixiaoji.fetchPendingParcels()
-            let result = try dependencies.parcelStore.syncSyncedParcels(remote.map { $0.makeDraft() })
+            let batch = try await dependencies.yixiaoji.fetchPendingParcels()
+            let result = try dependencies.parcelStore.syncSyncedParcels(
+                batch.parcels.map { $0.makeDraft() },
+                markMissingSyncedLockerParcelsPickedUp: !batch.isTruncated
+            )
             reloadParcels(animatingDifferences: true)
             return result
+        } catch is CancellationError {
+            return nil
         } catch let apiError as YixiaojiAPIError {
             presentYixiaojiSyncErrorAlert(apiError)
             return nil
@@ -315,11 +320,11 @@ private extension DashboardViewController {
             title = String(localized: "Session Expired")
             message = String(localized: "Your Yixiaoji session expired. Please sign in again in Settings.")
             showSettings = true
-        case let .serverError(serverMessage), let .invalidCredentials(serverMessage):
+        case let .serverError(serverMessage), let .invalidCredentials(serverMessage), let .storageError(serverMessage):
             title = String(localized: "Couldn’t Sync Yixiaoji")
             message = serverMessage.isEmpty ? String(localized: "Please try again.") : serverMessage
             showSettings = false
-        case .invalidResponse, .networkError:
+        case .missingCabinetSelection, .unlockUnconfirmed, .invalidResponse, .networkError:
             title = String(localized: "Couldn’t Sync Yixiaoji")
             message = String(localized: "Check your connection, then try again.")
             showSettings = false

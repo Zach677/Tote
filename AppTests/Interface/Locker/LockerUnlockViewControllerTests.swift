@@ -140,15 +140,20 @@ struct LockerUnlockViewControllerTests {
         let parcel = try #require(added.first)
 
         // Keyword search returns empty, but pending list has integer-coerced code without leading zero
-        env.yixiaoji.pendingParcelsResult = .success([
-            YixiaojiRemoteParcel(
-                pickupCode: "5240000",
-                trackingNumber: "YT0000000000000",
-                cabinetName: "Sample Locker A1",
-                cabinetMAC: "MAC-A1",
-                siteID: "42"
-            ),
-        ])
+        env.yixiaoji.pendingParcelsResult = .success(
+            YixiaojiPendingSyncBatch(
+                parcels: [
+                    YixiaojiRemoteParcel(
+                        pickupCode: "5240000",
+                        trackingNumber: "YT0000000000000",
+                        cabinetName: "Sample Locker A1",
+                        cabinetMAC: "MAC-A1",
+                        siteID: "42"
+                    ),
+                ],
+                isTruncated: false
+            )
+        )
 
         let controller = LockerUnlockViewController(parcel: parcel, dependencies: env.dependencies)
         controller.loadViewIfNeeded()
@@ -158,5 +163,73 @@ struct LockerUnlockViewControllerTests {
         #expect(controller.selectedCabinetName == "Sample Locker A1")
         #expect(controller.selectedCabinetMAC == "MAC-A1")
         #expect(controller.selectedSiteID == "42")
+    }
+
+    @Test
+    func unlockIsFailClosedWithoutCabinetIgnoresMismatchedSingleResultAndPreservesManualChoice() async throws {
+        let session = YixiaojiSession(uid: "1001", token: "demo-token", username: "demo")
+        let env = TestEnvironment(yixiaojiSession: session)
+        defer { env.cleanup() }
+
+        let added = try env.store.add(
+            [ParsedParcelDraft(pickupCode: "05240000", channel: .locker)],
+            source: .pasted
+        ).added
+        let parcel = try #require(added.first)
+
+        // Single search result has a DIFFERENT pickup code -> must NOT match or persist!
+        env.yixiaoji.searchResultsByKeyword["05240000"] = [
+            YixiaojiRemoteParcel(
+                pickupCode: "99999999",
+                cabinetName: "Wrong Locker",
+                cabinetMAC: "MAC-WRONG",
+                siteID: "99"
+            ),
+        ]
+
+        let controller = LockerUnlockViewController(parcel: parcel, dependencies: env.dependencies)
+        controller.loadViewIfNeeded()
+        await controller.performInitialLookup()
+
+        #expect(!controller.didAutoMatchCabinet)
+        #expect(!controller.hasExplicitCabinetTarget)
+        #expect(!controller.canUnlock)
+        #expect(!controller.primaryButton.isEnabled)
+
+        await controller.performUnlock()
+        #expect(env.yixiaoji.unlockRequests.isEmpty)
+
+        // Manual cabinet selection during an in-flight lookup must NOT be overwritten.
+        let manualCabinet = YixiaojiCabinet(id: "43", name: "Sample Locker B2", mac: "MAC-B2")
+        env.yixiaoji.searchResultsByKeyword["05240000"] = [
+            YixiaojiRemoteParcel(
+                pickupCode: "05240000",
+                cabinetName: "Sample Locker A1",
+                cabinetMAC: "MAC-A1",
+                siteID: "42"
+            ),
+        ]
+        env.yixiaoji.searchDelay = .milliseconds(50)
+
+        let raceController = LockerUnlockViewController(parcel: parcel, dependencies: env.dependencies)
+        raceController.loadViewIfNeeded()
+        let lookupTask = Task {
+            await raceController.performInitialLookup()
+        }
+        try await Task.sleep(for: .milliseconds(10))
+        raceController.selectCabinet(manualCabinet)
+        await lookupTask.value
+
+        #expect(raceController.selectedCabinetName == "Sample Locker B2")
+        #expect(raceController.selectedCabinetMAC == "MAC-B2")
+        #expect(raceController.selectedSiteID == "43")
+        #expect(raceController.canUnlock)
+
+        // Unconfirmed unlock transitions to .unconfirmed warning state.
+        env.yixiaoji.unlockResult = .failure(
+            YixiaojiAPIError.unlockUnconfirmed(message: "Timeout checking status", orderSN: "ORD-99")
+        )
+        await raceController.performUnlock()
+        #expect(raceController.unlockState == .unconfirmed(message: "Timeout checking status"))
     }
 }

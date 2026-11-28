@@ -11,17 +11,20 @@ public struct AddParcelsResult: Equatable, Sendable {
     public var added: [Parcel]
     public var updated: [Parcel]
     public var skippedDuplicateCount: Int
+    public var markedPickedUpCount: Int
     public var firstAffectedID: UUID?
 
     public init(
         added: [Parcel] = [],
         updated: [Parcel] = [],
         skippedDuplicateCount: Int = 0,
+        markedPickedUpCount: Int = 0,
         firstAffectedID: UUID? = nil
     ) {
         self.added = added
         self.updated = updated
         self.skippedDuplicateCount = skippedDuplicateCount
+        self.markedPickedUpCount = markedPickedUpCount
         self.firstAffectedID = firstAffectedID
     }
 }
@@ -141,11 +144,16 @@ public struct ParcelStore: Sendable {
         )
     }
 
-    /// Merges synced remote parcels into the local store, enriching matching pending entries
+    /// Merges synced remote locker parcels into the local store, enriching matching pending entries
     /// when remote metadata (cabinet name, MAC, site ID, or tracking number) was missing locally.
-    public func syncSyncedParcels(_ drafts: [ParsedParcelDraft]) throws -> AddParcelsResult {
+    /// When `markMissingSyncedLockerParcelsPickedUp` is true (only safe when remote fetch was not truncated),
+    /// pending `source == .synced` locker parcels absent from `drafts` are marked picked up.
+    public func syncSyncedParcels(
+        _ drafts: [ParsedParcelDraft],
+        markMissingSyncedLockerParcelsPickedUp: Bool = false
+    ) throws -> AddParcelsResult {
         let validDrafts = drafts.filter(\.isValid)
-        guard !validDrafts.isEmpty else {
+        if validDrafts.isEmpty, !markMissingSyncedLockerParcelsPickedUp {
             return AddParcelsResult()
         }
 
@@ -155,7 +163,9 @@ public struct ParcelStore: Sendable {
 
         var addedIDs: [UUID] = []
         var updatedIDs: [UUID] = []
+        var matchedParcelIDs: Set<UUID> = []
         var skippedDuplicateCount = 0
+        var markedPickedUpCount = 0
         var firstAffectedID: UUID?
 
         for draft in validDrafts {
@@ -165,6 +175,7 @@ public struct ParcelStore: Sendable {
                 let parcel = draft.makeParcel(source: .synced, now: timestamp)
                 parcels.append(parcel)
                 addedIDs.append(parcel.id)
+                matchedParcelIDs.insert(parcel.id)
                 if firstAffectedID == nil {
                     firstAffectedID = parcel.id
                 }
@@ -173,6 +184,7 @@ public struct ParcelStore: Sendable {
                     continue
                 }
                 parcels[index] = deduplicator.merge(draft, into: parcels[index], updatedAt: timestamp)
+                matchedParcelIDs.insert(existingID)
                 if !addedIDs.contains(existingID), !updatedIDs.contains(existingID) {
                     updatedIDs.append(existingID)
                 }
@@ -180,6 +192,7 @@ public struct ParcelStore: Sendable {
                     firstAffectedID = existingID
                 }
             case let .duplicate(existingID):
+                matchedParcelIDs.insert(existingID)
                 guard let index = parcels.firstIndex(where: { $0.id == existingID }) else {
                     skippedDuplicateCount += 1
                     continue
@@ -206,7 +219,22 @@ public struct ParcelStore: Sendable {
             }
         }
 
-        if !addedIDs.isEmpty || !updatedIDs.isEmpty {
+        if markMissingSyncedLockerParcelsPickedUp {
+            for index in parcels.indices {
+                let parcel = parcels[index]
+                guard parcel.isPending,
+                      parcel.source == .synced,
+                      parcel.channel == .locker,
+                      !matchedParcelIDs.contains(parcel.id)
+                else { continue }
+
+                parcels[index].status = .pickedUp(at: timestamp)
+                parcels[index].updatedAt = timestamp
+                markedPickedUpCount += 1
+            }
+        }
+
+        if !addedIDs.isEmpty || !updatedIDs.isEmpty || markedPickedUpCount > 0 {
             try saveParcelsToDisk(parcels)
         }
 
@@ -218,6 +246,7 @@ public struct ParcelStore: Sendable {
             added: added,
             updated: updated,
             skippedDuplicateCount: skippedDuplicateCount,
+            markedPickedUpCount: markedPickedUpCount,
             firstAffectedID: firstAffectedID
         )
     }

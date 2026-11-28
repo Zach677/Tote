@@ -94,15 +94,20 @@ struct DashboardViewControllerTests {
         let env = TestEnvironment(yixiaojiSession: session)
         defer { env.cleanup() }
 
-        env.yixiaoji.pendingParcelsResult = .success([
-            YixiaojiRemoteParcel(
-                pickupCode: "05240000",
-                trackingNumber: "YT0000000000000",
-                cabinetName: "Sample Locker A1",
-                cabinetMAC: "MAC-A1",
-                siteID: "42"
-            ),
-        ])
+        env.yixiaoji.pendingParcelsResult = .success(
+            YixiaojiPendingSyncBatch(
+                parcels: [
+                    YixiaojiRemoteParcel(
+                        pickupCode: "05240000",
+                        trackingNumber: "YT0000000000000",
+                        cabinetName: "Sample Locker A1",
+                        cabinetMAC: "MAC-A1",
+                        siteID: "42"
+                    ),
+                ],
+                isTruncated: false
+            )
+        )
 
         let controller = DashboardViewController(dependencies: env.dependencies)
         controller.loadViewIfNeeded()

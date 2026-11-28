@@ -243,9 +243,11 @@ private extension YixiaojiLoginViewController {
         switch error {
         case let .invalidCredentials(message):
             message.isEmpty ? String(localized: "Invalid account or password.") : message
+        case .storageError:
+            String(localized: "Couldn’t save your session securely. Please try again.")
         case let .serverError(message), let .sessionExpired(message):
             message.isEmpty ? String(localized: "Couldn’t sign in. Please try again.") : message
-        case .notSignedIn, .invalidResponse, .networkError:
+        case .notSignedIn, .missingCabinetSelection, .unlockUnconfirmed, .invalidResponse, .networkError:
             String(localized: "Couldn’t sign in. Check your connection and try again.")
         }
     }

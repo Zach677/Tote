@@ -217,9 +217,26 @@ struct YixiaojiModelsTests {
         #expect(enriched.lockerSiteID == "42")
 
         // Second sync with identical data skips both without modifying
-        let secondSync = try syncStore.syncSyncedParcels([remote1.makeDraft(), remote2.makeDraft()])
+        let secondSync = try syncStore.syncSyncedParcels(
+            [remote1.makeDraft(), remote2.makeDraft()],
+            markMissingSyncedLockerParcelsPickedUp: true
+        )
         #expect(secondSync.added.isEmpty)
         #expect(secondSync.updated.isEmpty)
+        #expect(secondSync.markedPickedUpCount == 0)
         #expect(secondSync.skippedDuplicateCount == 2)
+
+        // Third sync (complete list) omits both remote parcels:
+        // only the synced parcel (remote2) is auto-marked picked up; the pasted parcel (remote1) stays pending.
+        let thirdSync = try syncStore.syncSyncedParcels(
+            [],
+            markMissingSyncedLockerParcelsPickedUp: true
+        )
+        #expect(thirdSync.markedPickedUpCount == 1)
+        let afterReconcile = try syncStore.load()
+        let pastedParcel = try #require(afterReconcile.first { $0.pickupCode == "05240000" })
+        let syncedParcel = try #require(afterReconcile.first { $0.pickupCode == "05240001" })
+        #expect(pastedParcel.isPending)
+        #expect(syncedParcel.isPickedUp)
     }
 }

@@ -237,6 +237,22 @@
         }
       }
     },
+    "Check the locker in front of you before opening again." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Check the locker in front of you before opening again."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请先确认面前的柜门是否已弹开，再决定是否重新开柜。"
+          }
+        }
+      }
+    },
     "Check the message, or enter the parcel yourself." : {
       "localizations" : {
         "en" : {
@@ -281,6 +297,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "选择快递柜"
+          }
+        }
+      }
+    },
+    "Choose a Locker First" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose a Locker First"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请先选择快递柜"
           }
         }
       }
@@ -589,6 +621,22 @@
         }
       }
     },
+    "Couldn’t save your session securely. Please try again." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn’t save your session securely. Please try again."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法安全保存登录状态，请重试。"
+          }
+        }
+      }
+    },
     "Couldn’t sign in. Check your connection and try again." : {
       "localizations" : {
         "en" : {
@@ -697,6 +745,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "完成"
+          }
+        }
+      }
+    },
+    "Door May Already Be Open" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Door May Already Be Open"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "柜门可能已弹开"
           }
         }
       }
@@ -825,6 +889,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "继续编辑"
+          }
+        }
+      }
+    },
+    "Loading Lockers…" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Loading Lockers…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在加载快递柜…"
           }
         }
       }
