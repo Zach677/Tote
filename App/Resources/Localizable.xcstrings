@@ -893,6 +893,22 @@
         }
       }
     },
+    "Last used locker — confirm before opening." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Last used locker — confirm before opening."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "上次使用的柜子，开柜前请确认。"
+          }
+        }
+      }
+    },
     "Loading Lockers…" : {
       "localizations" : {
         "en" : {

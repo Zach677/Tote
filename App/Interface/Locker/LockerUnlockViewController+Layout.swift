@@ -8,7 +8,8 @@ extension LockerUnlockViewController {
         navigationItem.leftBarButtonItem = UIBarButtonItem(
             systemItem: .close,
             primaryAction: UIAction { [weak self] _ in
-                self?.dismiss(animated: true)
+                guard let self, unlockState != .unlocking else { return }
+                dismiss(animated: true)
             }
         )
     }

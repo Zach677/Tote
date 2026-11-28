@@ -77,6 +77,7 @@ final class FakeYixiaojiService: YixiaojiServicing {
     )
     var searchResultsByKeyword: [String: [YixiaojiRemoteParcel]] = [:]
     var searchDelay: Duration?
+    var unlockDelay: Duration?
     var cabinetsResult: Result<[YixiaojiCabinet], any Error> = .success([])
     var unlockResult: Result<YixiaojiUnlockResult, any Error> = .success(
         .opened(compartment: "28", message: "Opened", orderSN: "ORD-001")
@@ -135,6 +136,9 @@ final class FakeYixiaojiService: YixiaojiServicing {
         unlockRequests.append(UnlockRequest(code: code, cabinetMAC: cabinetMAC, siteID: siteID))
         guard currentSession != nil else {
             throw YixiaojiAPIError.notSignedIn
+        }
+        if let unlockDelay {
+            try await Task.sleep(for: unlockDelay)
         }
         return try unlockResult.get()
     }

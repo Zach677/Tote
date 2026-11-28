@@ -105,6 +105,18 @@ struct YixiaojiModelsTests {
         #expect(parcels[1].cabinetMAC.isEmpty)
         #expect(parcels[1].siteID == "43")
         #expect(parcels[1].isPickedUp)
+
+        // Only code == 1 may return an empty pending list; non-1 or missing code must fail closed.
+        #expect(try YixiaojiResponseParser.parseSearchResponse(Data(#"{"code":1,"data":[]}"#.utf8)).isEmpty)
+        #expect(throws: YixiaojiAPIError.serverError("")) {
+            try YixiaojiResponseParser.parseSearchResponse(Data(#"{"code":0}"#.utf8))
+        }
+        #expect(throws: YixiaojiAPIError.sessionExpired("")) {
+            try YixiaojiResponseParser.parseSearchResponse(Data(#"{"code":401}"#.utf8))
+        }
+        #expect(throws: YixiaojiAPIError.invalidResponse) {
+            try YixiaojiResponseParser.parseSearchResponse(Data(#"{}"#.utf8))
+        }
     }
 
     @Test("Parses cabinet list, overdue payment submission, and checkOrder compartment fallback")
@@ -181,9 +193,12 @@ struct YixiaojiModelsTests {
         let t1 = Date(timeIntervalSince1970: 1_700_000_500)
         let initialStore = ParcelStore(directoryURL: dir, now: { t0 })
 
-        // User pasted a bare 8-digit locker code before syncing
+        // User pasted two bare 8-digit locker codes before syncing: one exists remotely, one does not.
         _ = try initialStore.add(
-            [ParsedParcelDraft(pickupCode: "05240000", channel: .locker)],
+            [
+                ParsedParcelDraft(pickupCode: "05240000", channel: .locker),
+                ParsedParcelDraft(pickupCode: "05240002", channel: .locker),
+            ],
             source: .pasted
         )
 
@@ -209,12 +224,13 @@ struct YixiaojiModelsTests {
         #expect(firstSync.skippedDuplicateCount == 0)
 
         let saved = try syncStore.load()
-        #expect(saved.count == 2)
+        #expect(saved.count == 3)
         let enriched = try #require(saved.first { $0.pickupCode == "05240000" })
         #expect(enriched.stationLabel == "Sample Locker A1")
         #expect(enriched.trackingNumber == "YT0000000000000")
         #expect(enriched.lockerMAC == "MAC-A1")
         #expect(enriched.lockerSiteID == "42")
+        #expect(enriched.source == .synced)
 
         // Second sync with identical data skips both without modifying
         let secondSync = try syncStore.syncSyncedParcels(
@@ -227,16 +243,20 @@ struct YixiaojiModelsTests {
         #expect(secondSync.skippedDuplicateCount == 2)
 
         // Third sync (complete list) omits both remote parcels:
-        // only the synced parcel (remote2) is auto-marked picked up; the pasted parcel (remote1) stays pending.
+        // confirmed synced parcels (remote1 promoted + remote2) are auto-marked picked up,
+        // while the unconfirmed pasted parcel (05240002) stays pending.
         let thirdSync = try syncStore.syncSyncedParcels(
             [],
             markMissingSyncedLockerParcelsPickedUp: true
         )
-        #expect(thirdSync.markedPickedUpCount == 1)
+        #expect(thirdSync.markedPickedUpCount == 2)
         let afterReconcile = try syncStore.load()
-        let pastedParcel = try #require(afterReconcile.first { $0.pickupCode == "05240000" })
+        let promotedParcel = try #require(afterReconcile.first { $0.pickupCode == "05240000" })
         let syncedParcel = try #require(afterReconcile.first { $0.pickupCode == "05240001" })
-        #expect(pastedParcel.isPending)
+        let unconfirmedPastedParcel = try #require(afterReconcile.first { $0.pickupCode == "05240002" })
+        #expect(promotedParcel.isPickedUp)
         #expect(syncedParcel.isPickedUp)
+        #expect(unconfirmedPastedParcel.isPending)
+        #expect(unconfirmedPastedParcel.source == .pasted)
     }
 }

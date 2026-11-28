@@ -163,7 +163,8 @@ final class LiveYixiaojiClient: YixiaojiServicing {
             path: Endpoints.tackLockOrder,
             queryItems: queryItems,
             token: session.token,
-            contentType: "application/x-www-form-urlencoded; charset=UTF-8"
+            contentType: "application/x-www-form-urlencoded; charset=UTF-8",
+            treatAmbiguousTransportAsUnconfirmed: true
         )
         let submission = try YixiaojiResponseParser.parseUnlockSubmission(submitData)
 
@@ -217,7 +218,8 @@ private extension LiveYixiaojiClient {
         path: String,
         queryItems: [URLQueryItem],
         token: String?,
-        contentType: String? = nil
+        contentType: String? = nil,
+        treatAmbiguousTransportAsUnconfirmed: Bool = false
     ) async throws -> Data {
         guard var components = URLComponents(
             url: Endpoints.baseURL.appendingPathComponent(path),
@@ -240,7 +242,10 @@ private extension LiveYixiaojiClient {
             request.setValue(contentType, forHTTPHeaderField: "Content-Type")
         }
 
-        return try await execute(request)
+        return try await execute(
+            request,
+            treatAmbiguousTransportAsUnconfirmed: treatAmbiguousTransportAsUnconfirmed
+        )
     }
 
     func sendJSONPost(
@@ -261,7 +266,10 @@ private extension LiveYixiaojiClient {
         return try await execute(request)
     }
 
-    func execute(_ request: URLRequest) async throws -> Data {
+    func execute(
+        _ request: URLRequest,
+        treatAmbiguousTransportAsUnconfirmed: Bool = false
+    ) async throws -> Data {
         let data: Data
         let response: URLResponse
         do {
@@ -270,6 +278,10 @@ private extension LiveYixiaojiClient {
             throw CancellationError()
         } catch let urlError as URLError where urlError.code == .cancelled {
             throw CancellationError()
+        } catch let urlError as URLError where treatAmbiguousTransportAsUnconfirmed
+            && (urlError.code == .timedOut || urlError.code == .networkConnectionLost)
+        {
+            throw YixiaojiAPIError.unlockUnconfirmed(message: urlError.localizedDescription, orderSN: "")
         } catch {
             throw YixiaojiAPIError.networkError(error.localizedDescription)
         }

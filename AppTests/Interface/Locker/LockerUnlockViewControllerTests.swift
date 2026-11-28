@@ -232,4 +232,59 @@ struct LockerUnlockViewControllerTests {
         await raceController.performUnlock()
         #expect(raceController.unlockState == .unconfirmed(message: "Timeout checking status"))
     }
+
+    @Test
+    func locksPresentationWhileUnlockingMarksLastUsedCabinetAndGuardsOverlappingLookups() async throws {
+        let session = YixiaojiSession(uid: "1001", token: "demo-token", username: "demo")
+        let env = TestEnvironment(yixiaojiSession: session)
+        defer { env.cleanup() }
+
+        let added = try env.store.add(
+            [ParsedParcelDraft(pickupCode: "05240000", channel: .locker)],
+            source: .pasted
+        ).added
+        let parcel = try #require(added.first)
+
+        let lastCabinet = YixiaojiCabinet(id: "43", name: "Sample Locker B2", mac: "MAC-B2")
+        env.yixiaoji.lastSelectedCabinet = lastCabinet
+        env.yixiaoji.cabinetsResult = .success([lastCabinet])
+        env.yixiaoji.searchDelay = .milliseconds(40)
+
+        let controller = LockerUnlockViewController(parcel: parcel, dependencies: env.dependencies)
+        let nav = UINavigationController(rootViewController: controller)
+        controller.loadViewIfNeeded()
+
+        // Start lookup 1, cancel it while starting lookup 2; lookup 1's defer must NOT clear loading for lookup 2.
+        let firstLookup = Task { await controller.performInitialLookup() }
+        try await Task.sleep(for: .milliseconds(5))
+        firstLookup.cancel()
+        let secondLookup = Task { await controller.performInitialLookup() }
+        await firstLookup.value
+        #expect(controller.isLoadingCabinets)
+        await secondLookup.value
+
+        #expect(!controller.isLoadingCabinets)
+        #expect(controller.isUsingLastSelectedCabinet)
+        #expect(controller.selectedCabinetMAC == "MAC-B2")
+
+        // Selecting explicitly clears the last-used indicator.
+        controller.selectCabinet(lastCabinet)
+        #expect(!controller.isUsingLastSelectedCabinet)
+
+        // While unlocking, modal dismissal and close button are locked.
+        env.yixiaoji.unlockDelay = .milliseconds(40)
+        env.yixiaoji.unlockResult = .success(.opened(compartment: "07", message: "Opened", orderSN: "ORD-07"))
+        let unlockTask = Task { await controller.performUnlock() }
+        try await Task.sleep(for: .milliseconds(10))
+        #expect(controller.unlockState == .unlocking)
+        #expect(controller.isModalInPresentation)
+        #expect(nav.isModalInPresentation)
+        #expect(controller.navigationItem.leftBarButtonItem?.isEnabled == false)
+
+        await unlockTask.value
+        #expect(!controller.isModalInPresentation)
+        #expect(!nav.isModalInPresentation)
+        #expect(controller.navigationItem.leftBarButtonItem?.isEnabled == true)
+        #expect(controller.unlockState == .opened(compartment: "07", message: "Opened"))
+    }
 }

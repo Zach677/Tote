@@ -239,14 +239,13 @@ public enum YixiaojiResponseParser {
             throw YixiaojiAPIError.invalidResponse
         }
 
-        let code = envelope.code?.intValue ?? 0
+        guard let code = envelope.code?.intValue else {
+            throw YixiaojiAPIError.invalidResponse
+        }
         if code != 1 {
             let message = envelope.msg?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-            if isAuthFailureMessage(message) {
+            if code == 401 || isAuthFailureMessage(message) {
                 throw YixiaojiAPIError.sessionExpired(message)
-            }
-            if envelope.data == nil, message.isEmpty {
-                return []
             }
             throw YixiaojiAPIError.serverError(message)
         }

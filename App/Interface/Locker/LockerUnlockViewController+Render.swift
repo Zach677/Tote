@@ -3,6 +3,10 @@ import UIKit
 
 extension LockerUnlockViewController {
     func render() {
+        let isUnlocking = unlockState == .unlocking
+        isModalInPresentation = isUnlocking
+        navigationController?.isModalInPresentation = isUnlocking
+        navigationItem.leftBarButtonItem?.isEnabled = !isUnlocking
         renderCabinetCard()
         renderStateAndButtons()
     }
@@ -37,6 +41,10 @@ private extension LockerUnlockViewController {
         if didAutoMatchCabinet, !selectedCabinetMAC.isEmpty {
             cabinetStatusLabel.text = String(localized: "Matched to this parcel’s locker")
             cabinetStatusLabel.textColor = .systemGreen
+            cabinetStatusLabel.isHidden = false
+        } else if isUsingLastSelectedCabinet, hasExplicitCabinetTarget {
+            cabinetStatusLabel.text = String(localized: "Last used locker — confirm before opening.")
+            cabinetStatusLabel.textColor = .secondaryLabel
             cabinetStatusLabel.isHidden = false
         } else if hasExplicitCabinetTarget {
             cabinetStatusLabel.text = String(localized: "Selected locker for opening")

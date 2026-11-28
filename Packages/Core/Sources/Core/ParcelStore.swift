@@ -145,9 +145,11 @@ public struct ParcelStore: Sendable {
     }
 
     /// Merges synced remote locker parcels into the local store, enriching matching pending entries
-    /// when remote metadata (cabinet name, MAC, site ID, or tracking number) was missing locally.
-    /// When `markMissingSyncedLockerParcelsPickedUp` is true (only safe when remote fetch was not truncated),
-    /// pending `source == .synced` locker parcels absent from `drafts` are marked picked up.
+    /// when remote metadata (cabinet name, MAC, site ID, or tracking number) was missing locally,
+    /// and promoting matched pending locker parcels to `source == .synced` once confirmed remotely.
+    /// When `markMissingSyncedLockerParcelsPickedUp` is true (only safe when remote fetch completed
+    /// with `code == 1` and without pagination truncation), pending `source == .synced` locker parcels
+    /// absent from `drafts` are marked picked up.
     public func syncSyncedParcels(
         _ drafts: [ParsedParcelDraft],
         markMissingSyncedLockerParcelsPickedUp: Bool = false
@@ -183,7 +185,11 @@ public struct ParcelStore: Sendable {
                 guard let index = parcels.firstIndex(where: { $0.id == existingID }) else {
                     continue
                 }
-                parcels[index] = deduplicator.merge(draft, into: parcels[index], updatedAt: timestamp)
+                var merged = deduplicator.merge(draft, into: parcels[index], updatedAt: timestamp)
+                if merged.channel == .locker {
+                    merged.source = .synced
+                }
+                parcels[index] = merged
                 matchedParcelIDs.insert(existingID)
                 if !addedIDs.contains(existingID), !updatedIDs.contains(existingID) {
                     updatedIDs.append(existingID)
@@ -198,13 +204,17 @@ public struct ParcelStore: Sendable {
                     continue
                 }
                 let existing = parcels[index]
-                let merged = deduplicator.merge(draft, into: existing, updatedAt: timestamp)
+                var merged = deduplicator.merge(draft, into: existing, updatedAt: timestamp)
+                if merged.channel == .locker, existing.isPending {
+                    merged.source = .synced
+                }
                 let changedMetadata = merged.stationLabel != existing.stationLabel
                     || merged.trackingNumber != existing.trackingNumber
                     || merged.lockerMAC != existing.lockerMAC
                     || merged.lockerSiteID != existing.lockerSiteID
                     || merged.channel != existing.channel
                     || merged.pickupCode != existing.pickupCode
+                    || merged.source != existing.source
                 if changedMetadata {
                     parcels[index] = merged
                     if !addedIDs.contains(existingID), !updatedIDs.contains(existingID) {

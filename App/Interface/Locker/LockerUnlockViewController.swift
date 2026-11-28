@@ -23,7 +23,9 @@ final class LockerUnlockViewController: UIViewController {
     private(set) var availableCabinets: [YixiaojiCabinet] = []
     private(set) var isLoadingCabinets = false
     private(set) var didAutoMatchCabinet = false
+    private(set) var isUsingLastSelectedCabinet = false
     private var userSelectedCabinetManually = false
+    private var lookupGeneration = 0
 
     let scrollView = UIScrollView()
     let contentStack = UIStackView()
@@ -100,12 +102,16 @@ final class LockerUnlockViewController: UIViewController {
     func performInitialLookup() async {
         guard dependencies.yixiaoji.currentSession != nil else { return }
 
+        lookupGeneration += 1
+        let generation = lookupGeneration
         isLoadingCabinets = true
         render()
 
         defer {
-            isLoadingCabinets = false
-            render()
+            if lookupGeneration == generation {
+                isLoadingCabinets = false
+                render()
+            }
         }
 
         // If this parcel has no exact cabinet binding yet (e.g. pasted manually),
@@ -113,7 +119,7 @@ final class LockerUnlockViewController: UIViewController {
         // Never overwrite a manual selection made while awaiting network responses.
         if !userSelectedCabinetManually, selectedCabinetMAC.isEmpty, parcel.hasPickupCode {
             let searchMatches = await (try? dependencies.yixiaoji.searchParcels(keyword: parcel.pickupCode)) ?? []
-            guard !Task.isCancelled else { return }
+            guard !Task.isCancelled, lookupGeneration == generation else { return }
 
             if !userSelectedCabinetManually, selectedCabinetMAC.isEmpty,
                let bestMatch = findBestRemoteMatch(in: searchMatches)
@@ -121,7 +127,7 @@ final class LockerUnlockViewController: UIViewController {
                 applyMatchedRemoteParcel(bestMatch)
             } else if !userSelectedCabinetManually, selectedCabinetMAC.isEmpty,
                       let pendingBatch = try? await dependencies.yixiaoji.fetchPendingParcels(),
-                      !Task.isCancelled,
+                      !Task.isCancelled, lookupGeneration == generation,
                       !userSelectedCabinetManually, selectedCabinetMAC.isEmpty,
                       let bestMatch = findBestRemoteMatch(in: pendingBatch.parcels)
             {
@@ -130,7 +136,7 @@ final class LockerUnlockViewController: UIViewController {
         }
 
         if let cabinets = try? await dependencies.yixiaoji.fetchCabinets(keyword: "") {
-            guard !Task.isCancelled else { return }
+            guard !Task.isCancelled, lookupGeneration == generation else { return }
             availableCabinets = cabinets
             if selectedCabinetName.isEmpty, !selectedSiteID.isEmpty,
                let matched = cabinets.first(where: { $0.id == selectedSiteID })
@@ -142,6 +148,7 @@ final class LockerUnlockViewController: UIViewController {
                     selectedCabinetName = last.name
                     selectedCabinetMAC = last.mac
                     selectedSiteID = last.id
+                    isUsingLastSelectedCabinet = true
                 }
             }
         }
@@ -149,6 +156,7 @@ final class LockerUnlockViewController: UIViewController {
 
     func selectCabinet(_ cabinet: YixiaojiCabinet) {
         userSelectedCabinetManually = true
+        isUsingLastSelectedCabinet = false
         selectedCabinetName = cabinet.name
         selectedCabinetMAC = cabinet.mac
         selectedSiteID = cabinet.id
@@ -192,7 +200,7 @@ final class LockerUnlockViewController: UIViewController {
                 UINotificationFeedbackGenerator(view: view).notificationOccurred(.warning)
             }
         } catch is CancellationError {
-            unlockState = .ready
+            unlockState = .unconfirmed(message: "")
         } catch let apiError as YixiaojiAPIError {
             switch apiError {
             case .notSignedIn:
@@ -359,6 +367,7 @@ private extension LockerUnlockViewController {
     }
 
     func applyMatchedRemoteParcel(_ remote: YixiaojiRemoteParcel) {
+        isUsingLastSelectedCabinet = false
         if !remote.cabinetName.isEmpty {
             selectedCabinetName = remote.cabinetName
         }

@@ -180,6 +180,28 @@ struct YixiaojiClientTests {
         await #expect(throws: CancellationError.self) {
             try await client.fetchCabinets()
         }
+
+        // 4. Ambiguous transport errors during tackLockOrder become unlockUnconfirmed;
+        // definite pre-dispatch errors stay networkError.
+        StubYixiaojiURLProtocol.setHandler { _ in
+            throw URLError(.timedOut)
+        }
+        do {
+            _ = try await client.unlockParcel(code: "05240000", cabinetMAC: "MAC-A1", siteID: "42")
+            Issue.record("Expected unlockUnconfirmed on timedOut tackLockOrder")
+        } catch let YixiaojiAPIError.unlockUnconfirmed(_, orderSN) {
+            #expect(orderSN.isEmpty)
+        }
+
+        StubYixiaojiURLProtocol.setHandler { _ in
+            throw URLError(.notConnectedToInternet)
+        }
+        do {
+            _ = try await client.unlockParcel(code: "05240000", cabinetMAC: "MAC-A1", siteID: "42")
+            Issue.record("Expected networkError when offline")
+        } catch YixiaojiAPIError.networkError {
+            // Expected definite pre-dispatch failure.
+        }
     }
 }
 

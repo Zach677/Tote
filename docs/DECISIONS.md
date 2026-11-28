@@ -23,8 +23,8 @@ Tote is a local-only iOS 26 UIKit app that unifies campus parcel pickup codes, t
 - **Chosen (Native 1B)**: Communicate directly with the undocumented endpoints used by the official `https://ai.iepple.com` H5 portal (`h5_login`, `userinfo`, `search`, `getLocalizationList`, `tackLockOrder`, `checkOrder`) using `URLSession`, storing the user's session token locally in iOS Keychain (`KeychainYixiaojiSessionStore`). No embedded `WKWebView` tab.
 - **Fail-Closed Unlock & Sync Constraints**:
   - Never send `tackLockOrder` without an explicit locker target (`cabinetMAC` or `siteID`) or while locker metadata is still loading.
-  - Never treat an empty `order_sn` or failed `checkOrder` as a confirmed open; surface an unconfirmed warning so the user checks the door before retrying.
-  - Reconcile picked-up state on `source == .synced` locker parcels only when the remote pending fetch completed without pagination truncation; never auto-complete pasted or manual parcels.
+  - Lock sheet dismissal (`isModalInPresentation`) while an unlock request is in flight. Treat ambiguous in-flight transport errors (`timedOut`, `networkConnectionLost`), cancellation, empty `order_sn`, or failed `checkOrder` as `.unlockUnconfirmed` so the user checks the door before retrying.
+  - Reconcile picked-up state on pending locker parcels confirmed by Yixiaoji (`source == .synced`, including pasted/manual locker parcels matched during a prior sync) only when the remote pending fetch succeeded with `code == 1` and without pagination truncation; never auto-complete unconfirmed pasted or manual parcels.
   - Keep **Open Yixiaoji in Safari** (`https://ai.iepple.com/h5/#/`) as the fallback whenever the undocumented protocol changes, expires, or requires WeChat overdue payment.
 - **Rejected**: Embedded `WKWebView` tab. Real-device dogfooding showed the WebView was redundant and opened on the account's previously bound station rather than the parcel's actual cabinet.
 
