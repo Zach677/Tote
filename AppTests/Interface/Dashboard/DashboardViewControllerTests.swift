@@ -82,7 +82,7 @@ struct DashboardViewControllerTests {
         env.launcher.shouldSucceed = false
         controller.handleSelection(of: .parcel(trackingOnlyParcel.id), sourceView: controller.view)
         #expect(env.clipboard.lastCopied == "YT0000000000000")
-        #expect(env.launcher.openedURLs.map(\.absoluteString) == [DuoduoLinkValidator.defaultURLString])
+        #expect(env.launcher.openedURLs == [AppDependencies.duoduoStationURL])
 
         controller.handleSelection(of: .duoduoAction, sourceView: controller.view)
         #expect(env.launcher.openedURLs.count == 2)

@@ -6,12 +6,12 @@ extension Notification.Name {
 }
 
 struct AppDependencies {
+    static let duoduoStationURL = URL(string: "pinduoduo://com.xunmeng.pinduoduo/mdkd/package")!
     static let yixiaojiWebFallbackURL = URL(string: "https://ai.iepple.com/h5/#/")!
 
     let parcelStore: ParcelStore
     let clipboard: any ClipboardManaging
     let launcher: any ExternalLaunching
-    let settings: any SettingsStoring
     let yixiaoji: any YixiaojiServicing
     let notificationCenter: NotificationCenter
     let parser: PickupParser
@@ -21,7 +21,6 @@ struct AppDependencies {
         parcelStore: ParcelStore,
         clipboard: any ClipboardManaging,
         launcher: any ExternalLaunching,
-        settings: any SettingsStoring,
         yixiaoji: any YixiaojiServicing,
         notificationCenter: NotificationCenter = .default,
         parser: PickupParser = PickupParser(),
@@ -30,7 +29,6 @@ struct AppDependencies {
         self.parcelStore = parcelStore
         self.clipboard = clipboard
         self.launcher = launcher
-        self.settings = settings
         self.yixiaoji = yixiaoji
         self.notificationCenter = notificationCenter
         self.parser = parser
@@ -51,7 +49,6 @@ struct AppDependencies {
             parcelStore: liveParcelStore(),
             clipboard: SystemClipboardService(),
             launcher: SystemExternalLauncher(),
-            settings: UserDefaultsSettingsStore(),
             yixiaoji: LiveYixiaojiClient(sessionStore: sessionStore)
         )
     }

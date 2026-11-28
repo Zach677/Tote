@@ -162,12 +162,7 @@ extension DashboardViewController {
     }
 
     func openDuoduoLink() {
-        guard let url = DuoduoLinkValidator.validatedURL(from: dependencies.settings.duoduoURLString) else {
-            presentDuoduoOpenFailureAlert()
-            return
-        }
-
-        dependencies.launcher.open(url) { [weak self] success in
+        dependencies.launcher.open(AppDependencies.duoduoStationURL) { [weak self] success in
             guard let self, !success else { return }
             presentDuoduoOpenFailureAlert()
         }
@@ -320,16 +315,10 @@ private extension DashboardViewController {
     func presentDuoduoOpenFailureAlert() {
         let alert = UIAlertController(
             title: String(localized: "Can’t Open Duoduo"),
-            message: String(localized: "Check that Pinduoduo is installed, or change the link in Settings."),
+            message: String(localized: "Check that Pinduoduo is installed on this iPhone."),
             preferredStyle: .alert
         )
-        let settingsAction = UIAlertAction(title: String(localized: "Settings"), style: .default) { [weak self] _ in
-            self?.presentSettings()
-        }
-        let okAction = UIAlertAction(title: String(localized: "OK"), style: .default)
-        alert.addAction(settingsAction)
-        alert.addAction(okAction)
-        alert.preferredAction = okAction
+        alert.addAction(UIAlertAction(title: String(localized: "OK"), style: .default))
         presentAlertIfPossible(alert)
     }
 

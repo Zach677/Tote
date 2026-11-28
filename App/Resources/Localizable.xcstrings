@@ -157,6 +157,22 @@
         }
       }
     },
+    "Add from Share Sheet or pick a photo" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add from Share Sheet or pick a photo"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "通过共享表单或相册选图提取取件码"
+          }
+        }
+      }
+    },
     "Add parcels from ${text}" : {
       "localizations" : {
         "en" : {
@@ -269,6 +285,22 @@
         }
       }
     },
+    "Bind to Action Button or Back Tap for 1-tap OCR" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bind to Action Button or Back Tap for 1-tap OCR"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "绑到操作按钮或轻点背面，一键无痕识图入库"
+          }
+        }
+      }
+    },
     "Can’t Open Duoduo" : {
       "localizations" : {
         "en" : {
@@ -281,6 +313,38 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "无法打开多多驿站"
+          }
+        }
+      }
+    },
+    "Can’t Open Shortcuts" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Can’t Open Shortcuts"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法打开快捷指令"
+          }
+        }
+      }
+    },
+    "Capture Current Screen" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Capture Current Screen"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "当前屏幕导入 Tote"
           }
         }
       }
@@ -333,18 +397,18 @@
         }
       }
     },
-    "Check that Pinduoduo is installed, or change the link in Settings." : {
+    "Check that Pinduoduo is installed on this iPhone." : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Check that Pinduoduo is installed, or change the link in Settings."
+            "value" : "Check that Pinduoduo is installed on this iPhone."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "请确认已安装拼多多，或在设置中修改链接。"
+            "value" : "请确认手机已安装拼多多 App。"
           }
         }
       }
@@ -377,6 +441,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "请检查短信内容，或手动填写包裹信息。"
+          }
+        }
+      }
+    },
+    "Check your connection and make sure Apple Shortcuts is installed." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Check your connection and make sure Apple Shortcuts is installed."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请检查网络连接，并确认已安装苹果「快捷指令」App。"
           }
         }
       }
@@ -877,22 +957,6 @@
         }
       }
     },
-    "Duoduo Station Link" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Duoduo Station Link"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "多多驿站链接"
-          }
-        }
-      }
-    },
     "Edit Parcel" : {
       "localizations" : {
         "en" : {
@@ -925,22 +989,6 @@
         }
       }
     },
-    "Enter a link that starts with an app scheme, such as pinduoduo://" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Enter a link that starts with an app scheme, such as pinduoduo://"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "请输入以应用协议开头的链接，例如 pinduoduo://"
-          }
-        }
-      }
-    },
     "Enter a pickup code, a tracking number, or both." : {
       "localizations" : {
         "en" : {
@@ -969,6 +1017,38 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "从文本、短信或截图中提取取件码和快递单号并保存到 Tote。"
+          }
+        }
+      }
+    },
+    "Import from Clipboard" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Import from Clipboard"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "剪贴板导入 Tote"
+          }
+        }
+      }
+    },
+    "Import from Screenshot" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Import from Screenshot"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "截图导入 Tote"
           }
         }
       }
@@ -1485,6 +1565,22 @@
         }
       }
     },
+    "Parse copied pickup codes in one tap" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Parse copied pickup codes in one tap"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "复制取件码或短信后一键添加到 Tote"
+          }
+        }
+      }
+    },
     "Password" : {
       "localizations" : {
         "en" : {
@@ -1645,22 +1741,6 @@
         }
       }
     },
-    "Reset to Default Link" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Reset to Default Link"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "恢复默认链接"
-          }
-        }
-      }
-    },
     "Restore" : {
       "localizations" : {
         "en" : {
@@ -1785,6 +1865,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "设置"
+          }
+        }
+      }
+    },
+    "Shortcuts" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shortcuts"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "快捷指令"
           }
         }
       }
@@ -2025,18 +2121,18 @@
         }
       }
     },
-    "Test Link" : {
+    "Tap to add in Apple Shortcuts. For automatic SMS capture, create a Message automation in Shortcuts using “Add Parcels from Text”." : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Test Link"
+            "value" : "Tap to add in Apple Shortcuts. For automatic SMS capture, create a Message automation in Shortcuts using “Add Parcels from Text”."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "测试链接"
+            "value" : "点击即可在「快捷指令」中一键添加。如需自动导入短信，请在「快捷指令 → 自动化」中新建信息自动化并添加「从文本添加包裹」。"
           }
         }
       }
@@ -2053,22 +2149,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "文本"
-          }
-        }
-      }
-    },
-    "The Open Duoduo Station button opens this link. Change it if you find a link that opens the identity code directly." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "The Open Duoduo Station button opens this link. Change it if you find a link that opens the identity code directly."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "“打开多多驿站”按钮会打开此链接。如果找到能直接打开身份码的链接，可以在这里替换。"
           }
         }
       }

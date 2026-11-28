@@ -4,8 +4,7 @@ import UIKit
 
 nonisolated enum SettingsSection: Hashable {
     case yixiaoji
-    case duoduoLink
-    case actions
+    case shortcuts
 }
 
 nonisolated enum SettingsItem: Hashable {
@@ -14,39 +13,18 @@ nonisolated enum SettingsItem: Hashable {
     case yixiaojiSyncNow
     case yixiaojiOpenSafari
     case yixiaojiSignOut
-    case urlEditor
-    case testLink
-    case resetLink
+    case shortcut(PresetShortcut)
 }
 
 final class SettingsViewController: UIViewController {
     let dependencies: AppDependencies
     var onParcelsChanged: () -> Void = {}
-    private(set) var urlText: String
     private(set) var isSyncingYixiaoji = false
     private(set) var lastSyncSummary: String?
 
     private var collectionView: UICollectionView!
     private var dataSource: UICollectionViewDiffableDataSource<SettingsSection, SettingsItem>!
-    private var doneButton: UIBarButtonItem!
-    private weak var editorCell: SettingsURLEditorCell?
     private var syncTask: Task<Void, Never>?
-
-    var validatedURL: URL? {
-        DuoduoLinkValidator.validatedURL(from: urlText)
-    }
-
-    var isLinkValid: Bool {
-        validatedURL != nil
-    }
-
-    var canResetToDefault: Bool {
-        urlText.trimmingCharacters(in: .whitespacesAndNewlines) != DuoduoLinkValidator.defaultURLString
-    }
-
-    var isDoneEnabled: Bool {
-        doneButton?.isEnabled ?? isLinkValid
-    }
 
     var isYixiaojiSignedIn: Bool {
         dependencies.yixiaoji.currentSession != nil
@@ -54,7 +32,6 @@ final class SettingsViewController: UIViewController {
 
     init(dependencies: AppDependencies) {
         self.dependencies = dependencies
-        urlText = dependencies.settings.duoduoURLString
         super.init(nibName: nil, bundle: nil)
     }
 
@@ -74,28 +51,6 @@ final class SettingsViewController: UIViewController {
         configureCollectionView()
         configureDataSource()
         applySnapshot(animatingDifferences: false)
-        updateValidationUI()
-    }
-
-    func updateURLText(_ newText: String, syncEditorCell: Bool = true) {
-        urlText = newText
-        if syncEditorCell {
-            editorCell?.setText(newText)
-        }
-        updateValidationUI()
-    }
-
-    func testCurrentLink() {
-        guard let url = validatedURL else { return }
-        dependencies.launcher.open(url) { [weak self] success in
-            guard let self, !success else { return }
-            presentTestFailureAlert()
-        }
-    }
-
-    func resetToDefault() {
-        guard canResetToDefault else { return }
-        updateURLText(DuoduoLinkValidator.defaultURLString, syncEditorCell: true)
     }
 
     func pushYixiaojiLogin() {
@@ -120,6 +75,13 @@ final class SettingsViewController: UIViewController {
 
     func openYixiaojiInSafari() {
         dependencies.launcher.open(AppDependencies.yixiaojiWebFallbackURL) { _ in }
+    }
+
+    func openShortcut(_ preset: PresetShortcut) {
+        dependencies.launcher.open(preset.iCloudURL) { [weak self] success in
+            guard let self, !success else { return }
+            presentShortcutOpenFailureAlert()
+        }
     }
 
     @discardableResult
@@ -164,63 +126,31 @@ final class SettingsViewController: UIViewController {
             return nil
         }
     }
-
-    @discardableResult
-    func saveAndDismiss() -> Bool {
-        guard validatedURL != nil else { return false }
-        let trimmed = urlText.trimmingCharacters(in: .whitespacesAndNewlines)
-        if trimmed == DuoduoLinkValidator.defaultURLString {
-            dependencies.settings.resetDuoduoURL()
-        } else {
-            dependencies.settings.duoduoURLString = trimmed
-        }
-        dismiss(animated: true)
-        return true
-    }
 }
 
 private extension SettingsViewController {
     func configureNavigationBar() {
         title = String(localized: "Settings")
         navigationItem.largeTitleDisplayMode = .never
-
         navigationItem.leftBarButtonItem = UIBarButtonItem(
             systemItem: .close,
             primaryAction: UIAction { [weak self] _ in
                 self?.dismiss(animated: true)
             }
         )
-
-        doneButton = UIBarButtonItem.prominentIconItem(
-            systemName: "checkmark",
-            accessibilityLabel: String(localized: "Done"),
-            isEnabled: isLinkValid,
-            primaryAction: UIAction { [weak self] _ in
-                self?.saveAndDismiss()
-            }
-        )
-        navigationItem.rightBarButtonItem = doneButton
     }
 
     func configureCollectionView() {
-        let layout = UICollectionViewCompositionalLayout { [weak self] sectionIndex, layoutEnvironment in
-            let section = self?.dataSource?.sectionIdentifier(for: sectionIndex)
+        let layout = UICollectionViewCompositionalLayout { _, layoutEnvironment in
             var config = UICollectionLayoutListConfiguration(appearance: .insetGrouped)
-            switch section {
-            case .yixiaoji, .duoduoLink:
-                config.headerMode = .supplementary
-                config.footerMode = .supplementary
-            case .actions, .none:
-                config.headerMode = .none
-                config.footerMode = .none
-            }
+            config.headerMode = .supplementary
+            config.footerMode = .supplementary
             return NSCollectionLayoutSection.list(using: config, layoutEnvironment: layoutEnvironment)
         }
 
         collectionView = UICollectionView(frame: .zero, collectionViewLayout: layout)
         collectionView.translatesAutoresizingMaskIntoConstraints = false
         collectionView.backgroundColor = .systemGroupedBackground
-        collectionView.keyboardDismissMode = .interactive
         collectionView.delegate = self
 
         view.addSubview(collectionView)
@@ -234,14 +164,6 @@ private extension SettingsViewController {
     }
 
     func configureDataSource() {
-        let editorRegistration = UICollectionView.CellRegistration<SettingsURLEditorCell, Void> { [weak self] cell, _, _ in
-            guard let self else { return }
-            editorCell = cell
-            cell.configure(text: urlText) { [weak self] updatedText in
-                self?.updateURLText(updatedText, syncEditorCell: false)
-            }
-        }
-
         let itemRegistration = UICollectionView.CellRegistration<UICollectionViewListCell, SettingsItem> { [weak self] cell, _, item in
             guard let self else { return }
             configureRowCell(cell, for: item)
@@ -255,10 +177,8 @@ private extension SettingsViewController {
             switch section {
             case .yixiaoji:
                 config.text = String(localized: "Yixiaoji Locker")
-            case .duoduoLink:
-                config.text = String(localized: "Duoduo Station Link")
-            case .actions:
-                config.text = nil
+            case .shortcuts:
+                config.text = String(localized: "Shortcuts")
             }
             headerCell.contentConfiguration = config
         }
@@ -270,22 +190,22 @@ private extension SettingsViewController {
             configureYixiaojiFooter(footerCell)
         }
 
-        let duoduoFooterRegistration = UICollectionView.SupplementaryRegistration<SettingsLinkFooterView>(
+        let shortcutsFooterRegistration = UICollectionView.SupplementaryRegistration<UICollectionViewListCell>(
             elementKind: UICollectionView.elementKindSectionFooter
-        ) { [weak self] footerView, _, _ in
-            guard let self else { return }
-            footerView.configure(isValid: isLinkValid)
+        ) { footerCell, _, _ in
+            var config = UIListContentConfiguration.footer()
+            config.textProperties.font = .preferredFont(forTextStyle: .footnote)
+            config.textProperties.color = .secondaryLabel
+            config.text = String(
+                localized: "Tap to add in Apple Shortcuts. For automatic SMS capture, create a Message automation in Shortcuts using “Add Parcels from Text”."
+            )
+            footerCell.contentConfiguration = config
         }
 
         dataSource = UICollectionViewDiffableDataSource<SettingsSection, SettingsItem>(
             collectionView: collectionView
         ) { collectionView, indexPath, item in
-            switch item {
-            case .urlEditor:
-                collectionView.dequeueConfiguredReusableCell(using: editorRegistration, for: indexPath, item: ())
-            default:
-                collectionView.dequeueConfiguredReusableCell(using: itemRegistration, for: indexPath, item: item)
-            }
+            collectionView.dequeueConfiguredReusableCell(using: itemRegistration, for: indexPath, item: item)
         }
 
         dataSource.supplementaryViewProvider = { [weak self] collectionView, elementKind, indexPath in
@@ -297,8 +217,8 @@ private extension SettingsViewController {
                 if section == .yixiaoji {
                     return collectionView.dequeueConfiguredReusableSupplementary(using: yixiaojiFooterRegistration, for: indexPath)
                 }
-                if section == .duoduoLink {
-                    return collectionView.dequeueConfiguredReusableSupplementary(using: duoduoFooterRegistration, for: indexPath)
+                if section == .shortcuts {
+                    return collectionView.dequeueConfiguredReusableSupplementary(using: shortcutsFooterRegistration, for: indexPath)
                 }
             }
             return nil
@@ -371,26 +291,22 @@ private extension SettingsViewController {
             cell.contentConfiguration = content
             cell.accessories = []
 
-        case .testLink:
-            var content = UIListContentConfiguration.cell()
-            content.text = String(localized: "Test Link")
+        case let .shortcut(preset):
+            var content = UIListContentConfiguration.subtitleCell()
+            content.image = UIImage(systemName: preset.symbolName)
+            content.imageProperties.tintColor = .tintColor
+            content.text = preset.title
             content.textProperties.font = .preferredFont(forTextStyle: .body)
-            content.textProperties.color = isLinkValid ? .tintColor : .tertiaryLabel
             content.textProperties.adjustsFontForContentSizeCategory = true
+            content.secondaryText = preset.subtitle
+            content.secondaryTextProperties.font = .preferredFont(forTextStyle: .footnote)
+            content.secondaryTextProperties.color = .secondaryLabel
+            content.secondaryTextProperties.adjustsFontForContentSizeCategory = true
+            content.secondaryTextProperties.numberOfLines = 0
             cell.contentConfiguration = content
-            cell.accessories = []
-
-        case .resetLink:
-            var content = UIListContentConfiguration.cell()
-            content.text = String(localized: "Reset to Default Link")
-            content.textProperties.font = .preferredFont(forTextStyle: .body)
-            content.textProperties.color = canResetToDefault ? .tintColor : .tertiaryLabel
-            content.textProperties.adjustsFontForContentSizeCategory = true
-            cell.contentConfiguration = content
-            cell.accessories = []
-
-        case .urlEditor:
-            break
+            let symbol = UIImageView(image: UIImage(systemName: "arrow.up.forward.app"))
+            symbol.tintColor = .tertiaryLabel
+            cell.accessories = [.customView(configuration: .init(customView: symbol, placement: .trailing()))]
         }
     }
 
@@ -411,7 +327,7 @@ private extension SettingsViewController {
     func applySnapshot(animatingDifferences: Bool) {
         let existingItems = Set(dataSource.snapshot().itemIdentifiers)
         var snapshot = NSDiffableDataSourceSnapshot<SettingsSection, SettingsItem>()
-        snapshot.appendSections([.yixiaoji, .duoduoLink, .actions])
+        snapshot.appendSections([.yixiaoji, .shortcuts])
 
         let yixiaojiItems: [SettingsItem] = if isYixiaojiSignedIn {
             [.yixiaojiAccount, .yixiaojiSyncNow, .yixiaojiOpenSafari, .yixiaojiSignOut]
@@ -419,10 +335,9 @@ private extension SettingsViewController {
             [.yixiaojiSignIn, .yixiaojiOpenSafari]
         }
         snapshot.appendItems(yixiaojiItems, toSection: .yixiaoji)
-        snapshot.appendItems([.urlEditor], toSection: .duoduoLink)
-        snapshot.appendItems([.testLink, .resetLink], toSection: .actions)
+        snapshot.appendItems(PresetShortcut.allCases.map(SettingsItem.shortcut), toSection: .shortcuts)
 
-        let reconfigureItems = snapshot.itemIdentifiers.filter { $0 != .urlEditor && existingItems.contains($0) }
+        let reconfigureItems = snapshot.itemIdentifiers.filter { existingItems.contains($0) }
         if !reconfigureItems.isEmpty {
             snapshot.reconfigureItems(reconfigureItems)
         }
@@ -440,31 +355,10 @@ private extension SettingsViewController {
         }
     }
 
-    func updateValidationUI() {
-        doneButton.updateProminentIconEnabled(isLinkValid, systemName: "checkmark")
-
-        var snapshot = dataSource.snapshot()
-        let actionItems = [SettingsItem.testLink, .resetLink].filter { snapshot.indexOfItem($0) != nil }
-        if !actionItems.isEmpty {
-            snapshot.reconfigureItems(actionItems)
-            dataSource.apply(snapshot, animatingDifferences: false)
-        }
-
-        if let duoduoSectionIndex = dataSource.snapshot().indexOfSection(.duoduoLink),
-           let footer = collectionView.supplementaryView(
-               forElementKind: UICollectionView.elementKindSectionFooter,
-               at: IndexPath(item: 0, section: duoduoSectionIndex)
-           ) as? SettingsLinkFooterView
-        {
-            footer.configure(isValid: isLinkValid)
-        }
-        collectionView.performBatchUpdates(nil)
-    }
-
-    func presentTestFailureAlert() {
+    func presentShortcutOpenFailureAlert() {
         let alert = UIAlertController(
-            title: String(localized: "Can’t Open Duoduo"),
-            message: String(localized: "Check that Pinduoduo is installed, or change the link in Settings."),
+            title: String(localized: "Can’t Open Shortcuts"),
+            message: String(localized: "Check your connection and make sure Apple Shortcuts is installed."),
             preferredStyle: .alert
         )
         alert.addAction(UIAlertAction(title: String(localized: "OK"), style: .default))
@@ -499,144 +393,21 @@ extension SettingsViewController: UICollectionViewDelegate {
             openYixiaojiInSafari()
         case .yixiaojiSignOut:
             signOutYixiaoji()
-        case .testLink:
-            testCurrentLink()
-        case .resetLink:
-            resetToDefault()
-        case .yixiaojiAccount, .urlEditor:
+        case let .shortcut(preset):
+            openShortcut(preset)
+        case .yixiaojiAccount:
             break
         }
     }
 
     private func isActionEnabled(_ item: SettingsItem) -> Bool {
         switch item {
-        case .urlEditor, .yixiaojiAccount:
+        case .yixiaojiAccount:
             false
-        case .yixiaojiSignIn, .yixiaojiOpenSafari, .yixiaojiSignOut:
+        case .yixiaojiSignIn, .yixiaojiOpenSafari, .yixiaojiSignOut, .shortcut:
             true
         case .yixiaojiSyncNow:
             !isSyncingYixiaoji
-        case .testLink:
-            isLinkValid
-        case .resetLink:
-            canResetToDefault
         }
-    }
-}
-
-private final class SettingsURLEditorCell: UICollectionViewListCell, UITextViewDelegate {
-    private let textView = UITextView()
-    private var onTextChange: (String) -> Void = { _ in }
-
-    override init(frame: CGRect) {
-        super.init(frame: frame)
-        configureLayout()
-    }
-
-    @available(*, unavailable)
-    required init?(coder _: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
-    }
-
-    func configure(text: String, onTextChange: @escaping (String) -> Void) {
-        self.onTextChange = onTextChange
-        setText(text)
-    }
-
-    func setText(_ text: String) {
-        if textView.text != text {
-            textView.text = text
-        }
-    }
-
-    func textViewDidChange(_ textView: UITextView) {
-        onTextChange(textView.text ?? "")
-    }
-
-    private func configureLayout() {
-        textView.translatesAutoresizingMaskIntoConstraints = false
-        textView.isScrollEnabled = false
-        textView.backgroundColor = .clear
-        textView.font = ParcelTypography.settingsURLFont
-        textView.adjustsFontForContentSizeCategory = true
-        textView.textColor = .label
-        textView.keyboardType = .URL
-        textView.autocapitalizationType = .none
-        textView.autocorrectionType = .no
-        textView.smartQuotesType = .no
-        textView.smartDashesType = .no
-        textView.smartInsertDeleteType = .no
-        textView.textContainerInset = UIEdgeInsets(top: 12, left: 0, bottom: 12, right: 0)
-        textView.textContainer.lineFragmentPadding = 0
-        textView.delegate = self
-
-        contentView.addSubview(textView)
-
-        NSLayoutConstraint.activate([
-            textView.topAnchor.constraint(equalTo: contentView.topAnchor),
-            textView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
-            textView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
-            textView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
-        ])
-    }
-}
-
-private final class SettingsLinkFooterView: UICollectionReusableView {
-    private let iconImageView = UIImageView()
-    private let messageLabel = UILabel()
-
-    override init(frame: CGRect) {
-        super.init(frame: frame)
-        configureLayout()
-    }
-
-    @available(*, unavailable)
-    required init?(coder _: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
-    }
-
-    func configure(isValid: Bool) {
-        if isValid {
-            iconImageView.isHidden = true
-            messageLabel.text = String(
-                localized: "The Open Duoduo Station button opens this link. Change it if you find a link that opens the identity code directly."
-            )
-            messageLabel.textColor = .secondaryLabel
-        } else {
-            iconImageView.isHidden = false
-            messageLabel.text = String(
-                localized: "Enter a link that starts with an app scheme, such as pinduoduo://"
-            )
-            messageLabel.textColor = .label
-        }
-    }
-
-    private func configureLayout() {
-        let symbolConfig = UIImage.SymbolConfiguration(textStyle: .footnote, scale: .medium)
-        iconImageView.image = UIImage(systemName: "exclamationmark.triangle.fill", withConfiguration: symbolConfig)
-        iconImageView.tintColor = .systemRed
-        iconImageView.adjustsImageSizeForAccessibilityContentSizeCategory = true
-        iconImageView.setContentHuggingPriority(.required, for: .horizontal)
-        iconImageView.setContentCompressionResistancePriority(.required, for: .horizontal)
-        iconImageView.isHidden = true
-
-        messageLabel.font = .preferredFont(forTextStyle: .footnote)
-        messageLabel.adjustsFontForContentSizeCategory = true
-        messageLabel.numberOfLines = 0
-
-        let stackView = UIStackView(arrangedSubviews: [iconImageView, messageLabel])
-        stackView.translatesAutoresizingMaskIntoConstraints = false
-        stackView.axis = .horizontal
-        stackView.alignment = .top
-        stackView.spacing = 6
-
-        addSubview(stackView)
-
-        NSLayoutConstraint.activate([
-            stackView.topAnchor.constraint(equalTo: topAnchor, constant: 8),
-            stackView.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -8),
-            stackView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 16),
-            stackView.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -16),
-        ])
     }
 }

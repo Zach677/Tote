@@ -24,18 +24,6 @@ final class FakeExternalLauncher: ExternalLaunching {
     }
 }
 
-final class InMemorySettingsStore: SettingsStoring {
-    var duoduoURLString: String
-
-    init(duoduoURLString: String = DuoduoLinkValidator.defaultURLString) {
-        self.duoduoURLString = duoduoURLString
-    }
-
-    func resetDuoduoURL() {
-        duoduoURLString = DuoduoLinkValidator.defaultURLString
-    }
-}
-
 final class InMemoryYixiaojiSessionStore: YixiaojiSessionStoring {
     var session: YixiaojiSession?
     var lastSelectedCabinet: YixiaojiCabinet?
@@ -148,14 +136,12 @@ struct TestEnvironment {
     let dependencies: AppDependencies
     let clipboard: FakeClipboardService
     let launcher: FakeExternalLauncher
-    let settings: InMemorySettingsStore
     let yixiaoji: FakeYixiaojiService
     let notificationCenter: NotificationCenter
     let store: ParcelStore
     let directoryURL: URL
 
     init(
-        duoduoURLString: String = DuoduoLinkValidator.defaultURLString,
         yixiaojiSession: YixiaojiSession? = nil,
         now: @escaping @Sendable () -> Date = Date.init
     ) {
@@ -164,7 +150,6 @@ struct TestEnvironment {
         let store = ParcelStore(directoryURL: directoryURL, now: now)
         let clipboard = FakeClipboardService()
         let launcher = FakeExternalLauncher()
-        let settings = InMemorySettingsStore(duoduoURLString: duoduoURLString)
         let yixiaoji = FakeYixiaojiService(session: yixiaojiSession)
         let notificationCenter = NotificationCenter()
 
@@ -172,14 +157,12 @@ struct TestEnvironment {
         self.store = store
         self.clipboard = clipboard
         self.launcher = launcher
-        self.settings = settings
         self.yixiaoji = yixiaoji
         self.notificationCenter = notificationCenter
         dependencies = AppDependencies(
             parcelStore: store,
             clipboard: clipboard,
             launcher: launcher,
-            settings: settings,
             yixiaoji: yixiaoji,
             notificationCenter: notificationCenter
         )

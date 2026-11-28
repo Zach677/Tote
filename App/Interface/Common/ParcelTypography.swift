@@ -41,12 +41,6 @@ enum ParcelTypography {
         )
     }
 
-    static var settingsURLFont: UIFont {
-        UIFontMetrics(forTextStyle: .subheadline).scaledFont(
-            for: .monospacedSystemFont(ofSize: 15, weight: .regular)
-        )
-    }
-
     static var accentForegroundColor: UIColor {
         UIColor { traits in
             traits.userInterfaceStyle == .dark ? .black : .white
