@@ -308,7 +308,9 @@ public enum YixiaojiResponseParser {
             throw YixiaojiAPIError.invalidResponse
         }
 
-        let code = envelope.code?.intValue ?? 0
+        guard let code = envelope.code?.intValue else {
+            throw YixiaojiAPIError.invalidResponse
+        }
         let message = envelope.msg?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
 
         if code == 0, envelope.data?.isPay?.intValue == 0 {
@@ -324,7 +326,7 @@ public enum YixiaojiResponseParser {
             return .submitted(orderSN: orderSN, message: message)
         }
 
-        if isAuthFailureMessage(message) {
+        if code == 401 || isAuthFailureMessage(message) {
             throw YixiaojiAPIError.sessionExpired(message)
         }
         throw YixiaojiAPIError.serverError(message)

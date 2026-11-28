@@ -164,9 +164,15 @@ final class LiveYixiaojiClient: YixiaojiServicing {
             queryItems: queryItems,
             token: session.token,
             contentType: "application/x-www-form-urlencoded; charset=UTF-8",
-            treatAmbiguousTransportAsUnconfirmed: true
+            treatAmbiguousOutcomeAsUnconfirmed: true
         )
-        let submission = try YixiaojiResponseParser.parseUnlockSubmission(submitData)
+        let submission: YixiaojiUnlockSubmission
+        do {
+            submission = try YixiaojiResponseParser.parseUnlockSubmission(submitData)
+        } catch YixiaojiAPIError.invalidResponse {
+            // Request was already sent; undecodable body or missing code cannot prove the door stayed shut.
+            throw YixiaojiAPIError.unlockUnconfirmed(message: "", orderSN: "")
+        }
 
         switch submission {
         case let .paymentRequired(message, amount, overdueDays):
@@ -219,7 +225,7 @@ private extension LiveYixiaojiClient {
         queryItems: [URLQueryItem],
         token: String?,
         contentType: String? = nil,
-        treatAmbiguousTransportAsUnconfirmed: Bool = false
+        treatAmbiguousOutcomeAsUnconfirmed: Bool = false
     ) async throws -> Data {
         guard var components = URLComponents(
             url: Endpoints.baseURL.appendingPathComponent(path),
@@ -244,7 +250,7 @@ private extension LiveYixiaojiClient {
 
         return try await execute(
             request,
-            treatAmbiguousTransportAsUnconfirmed: treatAmbiguousTransportAsUnconfirmed
+            treatAmbiguousOutcomeAsUnconfirmed: treatAmbiguousOutcomeAsUnconfirmed
         )
     }
 
@@ -268,7 +274,7 @@ private extension LiveYixiaojiClient {
 
     func execute(
         _ request: URLRequest,
-        treatAmbiguousTransportAsUnconfirmed: Bool = false
+        treatAmbiguousOutcomeAsUnconfirmed: Bool = false
     ) async throws -> Data {
         let data: Data
         let response: URLResponse
@@ -278,8 +284,8 @@ private extension LiveYixiaojiClient {
             throw CancellationError()
         } catch let urlError as URLError where urlError.code == .cancelled {
             throw CancellationError()
-        } catch let urlError as URLError where treatAmbiguousTransportAsUnconfirmed
-            && (urlError.code == .timedOut || urlError.code == .networkConnectionLost)
+        } catch let urlError as URLError where treatAmbiguousOutcomeAsUnconfirmed
+            && !Self.isDefinitePreDispatchError(urlError)
         {
             throw YixiaojiAPIError.unlockUnconfirmed(message: urlError.localizedDescription, orderSN: "")
         } catch {
@@ -287,15 +293,37 @@ private extension LiveYixiaojiClient {
         }
 
         guard let httpResponse = response as? HTTPURLResponse else {
+            if treatAmbiguousOutcomeAsUnconfirmed {
+                throw YixiaojiAPIError.unlockUnconfirmed(message: "", orderSN: "")
+            }
             throw YixiaojiAPIError.invalidResponse
         }
         guard (200 ..< 300).contains(httpResponse.statusCode) else {
             if httpResponse.statusCode == 401 {
                 throw YixiaojiAPIError.sessionExpired("")
             }
+            if treatAmbiguousOutcomeAsUnconfirmed {
+                throw YixiaojiAPIError.unlockUnconfirmed(message: "HTTP \(httpResponse.statusCode)", orderSN: "")
+            }
             throw YixiaojiAPIError.networkError("HTTP \(httpResponse.statusCode)")
         }
 
         return data
+    }
+
+    static func isDefinitePreDispatchError(_ error: URLError) -> Bool {
+        switch error.code {
+        case .notConnectedToInternet,
+             .cannotFindHost,
+             .cannotConnectToHost,
+             .dnsLookupFailed,
+             .dataNotAllowed,
+             .internationalRoamingOff,
+             .secureConnectionFailed,
+             .appTransportSecurityRequiresSecureConnection:
+            true
+        default:
+            false
+        }
     }
 }

@@ -166,6 +166,13 @@ struct YixiaojiModelsTests {
         let submitted = try YixiaojiResponseParser.parseUnlockSubmission(submittedJSON)
         #expect(submitted == .submitted(orderSN: "ORD-001", message: "Submitted"))
 
+        #expect(throws: YixiaojiAPIError.invalidResponse) {
+            try YixiaojiResponseParser.parseUnlockSubmission(Data(#"{"msg":"missing code"}"#.utf8))
+        }
+        #expect(throws: YixiaojiAPIError.sessionExpired("")) {
+            try YixiaojiResponseParser.parseUnlockSubmission(Data(#"{"code":401}"#.utf8))
+        }
+
         let boxCodeJSON = Data(#"{"code":1,"msg":"Opened","data":{"box_code":28,"dev_code":"A01"}}"#.utf8)
         let openedBox = try YixiaojiResponseParser.parseCheckOrderResponse(
             boxCodeJSON,

@@ -202,6 +202,36 @@ struct YixiaojiClientTests {
         } catch YixiaojiAPIError.networkError {
             // Expected definite pre-dispatch failure.
         }
+
+        // 5. Post-dispatch HTTP 5xx, undecodable body, or missing code on tackLockOrder -> unlockUnconfirmed.
+        StubYixiaojiURLProtocol.setHandler { _ in
+            (502, Data("Bad Gateway".utf8))
+        }
+        await #expect(throws: YixiaojiAPIError.unlockUnconfirmed(message: "HTTP 502", orderSN: "")) {
+            try await client.unlockParcel(code: "05240000", cabinetMAC: "MAC-A1", siteID: "42")
+        }
+
+        StubYixiaojiURLProtocol.setHandler { _ in
+            (200, Data("not json".utf8))
+        }
+        await #expect(throws: YixiaojiAPIError.unlockUnconfirmed(message: "", orderSN: "")) {
+            try await client.unlockParcel(code: "05240000", cabinetMAC: "MAC-A1", siteID: "42")
+        }
+
+        StubYixiaojiURLProtocol.setHandler { _ in
+            (200, Data(#"{"data":{"order_sn":"ORD-1"}}"#.utf8))
+        }
+        await #expect(throws: YixiaojiAPIError.unlockUnconfirmed(message: "", orderSN: "")) {
+            try await client.unlockParcel(code: "05240000", cabinetMAC: "MAC-A1", siteID: "42")
+        }
+
+        // HTTP 401 still surfaces sessionExpired rather than unlockUnconfirmed.
+        StubYixiaojiURLProtocol.setHandler { _ in
+            (401, Data())
+        }
+        await #expect(throws: YixiaojiAPIError.sessionExpired("")) {
+            try await client.unlockParcel(code: "05240000", cabinetMAC: "MAC-A1", siteID: "42")
+        }
     }
 }
 
