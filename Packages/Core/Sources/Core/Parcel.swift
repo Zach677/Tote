@@ -1,18 +1,17 @@
 import Foundation
 
 public enum PickupChannel: String, CaseIterable, Codable, Hashable, Sendable {
-    case duoduo
-    case yixiaoji
-    case cainiao
-    case sfExpress
+    case station
+    case locker
     case jd
+    case sfExpress
     case other
 
-    var isStationChannel: Bool {
+    public var isPhysicalPickupPoint: Bool {
         switch self {
-        case .duoduo, .yixiaoji, .cainiao:
+        case .station, .locker:
             true
-        case .sfExpress, .jd, .other:
+        case .jd, .sfExpress, .other:
             false
         }
     }
@@ -21,6 +20,7 @@ public enum PickupChannel: String, CaseIterable, Codable, Hashable, Sendable {
 public enum ParcelSource: String, Codable, Hashable, Sendable {
     case pasted
     case manual
+    case synced
 }
 
 public enum ParcelStatus: Codable, Hashable, Sendable {
@@ -35,6 +35,8 @@ public struct Parcel: Identifiable, Codable, Hashable, Sendable {
     public var channel: PickupChannel
     public var stationLabel: String
     public var note: String
+    public var lockerMAC: String
+    public var lockerSiteID: String
     public var status: ParcelStatus
     public var source: ParcelSource
     public var createdAt: Date
@@ -47,6 +49,8 @@ public struct Parcel: Identifiable, Codable, Hashable, Sendable {
         channel: PickupChannel = .other,
         stationLabel: String = "",
         note: String = "",
+        lockerMAC: String = "",
+        lockerSiteID: String = "",
         status: ParcelStatus = .pending,
         source: ParcelSource = .pasted,
         createdAt: Date = Date(),
@@ -58,6 +62,8 @@ public struct Parcel: Identifiable, Codable, Hashable, Sendable {
         self.channel = channel
         self.stationLabel = stationLabel
         self.note = note
+        self.lockerMAC = lockerMAC
+        self.lockerSiteID = lockerSiteID
         self.status = status
         self.source = source
         self.createdAt = createdAt
@@ -114,6 +120,8 @@ public struct Parcel: Identifiable, Codable, Hashable, Sendable {
             channel: channel,
             stationLabel: stationLabel.trimmingCharacters(in: .whitespacesAndNewlines),
             note: note.trimmingCharacters(in: .whitespacesAndNewlines),
+            lockerMAC: lockerMAC.trimmingCharacters(in: .whitespacesAndNewlines),
+            lockerSiteID: lockerSiteID.trimmingCharacters(in: .whitespacesAndNewlines),
             status: status,
             source: source,
             createdAt: createdAt,
@@ -129,6 +137,8 @@ public struct ParsedParcelDraft: Identifiable, Hashable, Sendable {
     public var channel: PickupChannel
     public var stationLabel: String
     public var note: String
+    public var lockerMAC: String
+    public var lockerSiteID: String
 
     public init(
         id: UUID = UUID(),
@@ -136,7 +146,9 @@ public struct ParsedParcelDraft: Identifiable, Hashable, Sendable {
         trackingNumber: String = "",
         channel: PickupChannel = .other,
         stationLabel: String = "",
-        note: String = ""
+        note: String = "",
+        lockerMAC: String = "",
+        lockerSiteID: String = ""
     ) {
         self.id = id
         self.pickupCode = pickupCode
@@ -144,6 +156,8 @@ public struct ParsedParcelDraft: Identifiable, Hashable, Sendable {
         self.channel = channel
         self.stationLabel = stationLabel
         self.note = note
+        self.lockerMAC = lockerMAC
+        self.lockerSiteID = lockerSiteID
     }
 
     public var normalizedPickupCode: String {
@@ -178,6 +192,8 @@ public struct ParsedParcelDraft: Identifiable, Hashable, Sendable {
             channel: channel,
             stationLabel: stationLabel.trimmingCharacters(in: .whitespacesAndNewlines),
             note: note.trimmingCharacters(in: .whitespacesAndNewlines),
+            lockerMAC: lockerMAC.trimmingCharacters(in: .whitespacesAndNewlines),
+            lockerSiteID: lockerSiteID.trimmingCharacters(in: .whitespacesAndNewlines),
             status: .pending,
             source: source,
             createdAt: now,

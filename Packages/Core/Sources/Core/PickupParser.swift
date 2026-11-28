@@ -255,6 +255,7 @@ private extension PickupParser {
             let trackingValue = trackingMatches.first?.value ?? ""
             let channel = explicitChannel
                 ?? inferChannel(fromTrackingNumber: trackingValue)
+                ?? inferChannel(fromPickupCode: codeMatches[0].value)
                 ?? .other
             return [
                 ParsedParcelDraft(
@@ -271,6 +272,7 @@ private extension PickupParser {
             return zip(codeMatches, trackingMatches).map { code, tracking in
                 let channel = explicitChannel
                     ?? inferChannel(fromTrackingNumber: tracking.value)
+                    ?? inferChannel(fromPickupCode: code.value)
                     ?? .other
                 return ParsedParcelDraft(
                     pickupCode: code.value,
@@ -286,6 +288,7 @@ private extension PickupParser {
             let trackingValue = (index == 0 && trackingMatches.count == 1) ? trackingMatches[0].value : ""
             let channel = explicitChannel
                 ?? inferChannel(fromTrackingNumber: trackingValue)
+                ?? inferChannel(fromPickupCode: code.value)
                 ?? .other
             return ParsedParcelDraft(
                 pickupCode: code.value,
@@ -318,16 +321,19 @@ private extension PickupParser {
 
 private extension PickupParser {
     func detectExplicitChannel(in normalized: String) -> PickupChannel? {
-        // Explicit station/locker keywords always outrank courier keywords and tracking prefixes
-        // so an SF or YT parcel delivered to Duoduo or Cainiao groups under the pickup station.
-        if let stationChannel = earliestMatch(in: normalized, rules: ChannelRules.explicitStations) {
-            return stationChannel
+        // Explicit physical pickup points always outrank courier brands and tracking prefixes
+        // so an SF or JD parcel delivered to a station or locker groups under its pickup point.
+        if let pickupPoint = earliestMatch(in: normalized, rules: ChannelRules.explicitPickupPoints) {
+            return pickupPoint
         }
-        if let platformStation = earliestMatch(in: normalized, rules: ChannelRules.duoduoPlatformHints) {
-            return platformStation
+        if let secondaryStation = earliestMatch(in: normalized, rules: ChannelRules.secondaryStationHints) {
+            return secondaryStation
         }
         if let courierChannel = earliestMatch(in: normalized, rules: ChannelRules.couriers) {
             return courierChannel
+        }
+        if let standaloneStation = earliestMatch(in: normalized, rules: ChannelRules.standaloneStationHints) {
+            return standaloneStation
         }
         return nil
     }
@@ -361,6 +367,25 @@ private extension PickupParser {
         }
         if normalized.hasPrefix("JD") {
             return .jd
+        }
+        return nil
+    }
+
+    func inferChannel(fromPickupCode pickupCode: String) -> PickupChannel? {
+        let cleaned = ParcelNormalization.normalizePickupCode(pickupCode)
+        guard !cleaned.isEmpty else { return nil }
+
+        if matchesWhole(cleaned, regex: Patterns.stationShelfCode) {
+            return .station
+        }
+        if matchesWhole(cleaned, regex: Patterns.lockerEightDigitCode) {
+            return .locker
+        }
+        if matchesWhole(cleaned, regex: Patterns.jdTwoPartCode) {
+            return .jd
+        }
+        if matchesWhole(cleaned, regex: Patterns.sfFourDigitCode) {
+            return .sfExpress
         }
         return nil
     }
@@ -625,8 +650,16 @@ private extension PickupParser {
     }
 
     func isValidStandaloneToken(_ token: String) -> Bool {
-        matchesWhole(token, regex: Patterns.standaloneDigits)
+        if matchesWhole(token, regex: Patterns.sfFourDigitCode) {
+            return !looksLikeCalendarYear(token)
+        }
+        return matchesWhole(token, regex: Patterns.standaloneDigits)
             || matchesWhole(token, regex: Patterns.standaloneAlphanumeric)
+    }
+
+    func looksLikeCalendarYear(_ token: String) -> Bool {
+        guard token.count == 4, let year = Int(token) else { return false }
+        return (1900 ... 2099).contains(year)
     }
 
     func matchesWhole(_ text: String, regex: NSRegularExpression) -> Bool {
@@ -721,10 +754,20 @@ private extension PickupParser {
 
     func matchingDraftIndex(for draft: ParsedParcelDraft, in existing: [ParsedParcelDraft]) -> Int? {
         if draft.hasPickupCode {
-            if let index = existing.firstIndex(where: {
-                $0.hasPickupCode
-                    && $0.channel == draft.channel
-                    && $0.normalizedPickupCode == draft.normalizedPickupCode
+            if let index = existing.firstIndex(where: { candidate in
+                guard candidate.hasPickupCode,
+                      candidate.channel == draft.channel,
+                      candidate.normalizedPickupCode == draft.normalizedPickupCode
+                else { return false }
+
+                // Never merge two parcels that carry distinct non-empty tracking numbers.
+                if draft.hasTrackingNumber,
+                   candidate.hasTrackingNumber,
+                   draft.normalizedTrackingNumber != candidate.normalizedTrackingNumber
+                {
+                    return false
+                }
+                return true
             }) {
                 return index
             }
@@ -752,7 +795,7 @@ private extension PickupParser {
         }
         if merged.channel == .other, incoming.channel != .other {
             merged.channel = incoming.channel
-        } else if !merged.channel.isStationChannel, incoming.channel.isStationChannel {
+        } else if !merged.channel.isPhysicalPickupPoint, incoming.channel.isPhysicalPickupPoint {
             merged.channel = incoming.channel
         }
         if merged.stationLabel.isEmpty, !incoming.stationLabel.isEmpty {
@@ -768,19 +811,40 @@ private extension PickupParser {
 // MARK: - Compiled Patterns
 
 private enum ChannelRules {
-    static let explicitStations: [(regex: NSRegularExpression, channel: PickupChannel)] = [
-        (makeRegex(#"多多买菜|多多驿站|多多自提|\bduoduo\s+station\b"#, options: .caseInsensitive), .duoduo),
-        (makeRegex(#"宜小集|\byixiaoji\b|\biepple\b"#, options: .caseInsensitive), .yixiaoji),
-        (makeRegex(#"菜鸟驿站|菜鸟裹裹|菜鸟|\bcainiao\b"#, options: .caseInsensitive), .cainiao),
+    static let explicitPickupPoints: [(regex: NSRegularExpression, channel: PickupChannel)] = [
+        (
+            makeRegex(
+                #"多多买菜|多多驿站|多多自提|菜鸟驿站|兔喜|妈妈驿站|近邻宝驿站|校园驿站|(?<!京东)(?<!顺丰)(?<!京东快递)(?<!京东物流)(?<!顺丰快递)(?<!顺丰速运)驿站|\bduoduo\s+station\b|\bcainiao\s+station\b"#,
+                options: .caseInsensitive
+            ),
+            .station
+        ),
+        (
+            makeRegex(
+                #"宜小集|丰巢|智能柜|快递柜|自提柜|\byixiaoji\b|\biepple\b|\b(?:smart\s+)?locker\b"#,
+                options: .caseInsensitive
+            ),
+            .locker
+        ),
     ]
 
-    static let duoduoPlatformHints: [(regex: NSRegularExpression, channel: PickupChannel)] = [
-        (makeRegex(#"拼多多|多多|\bduoduo\b|\bpinduoduo\b"#, options: .caseInsensitive), .duoduo),
+    static let secondaryStationHints: [(regex: NSRegularExpression, channel: PickupChannel)] = [
+        (makeRegex(#"拼多多|多多|菜鸟裹裹|菜鸟|\bduoduo\b|\bpinduoduo\b|\bcainiao\b"#, options: .caseInsensitive), .station),
     ]
 
     static let couriers: [(regex: NSRegularExpression, channel: PickupChannel)] = [
+        (makeRegex(#"京东快递服务站|京东快递站|京东快递|京东物流|京东|\bjd\b"#, options: .caseInsensitive), .jd),
         (makeRegex(#"顺丰速运|顺丰快递|顺丰|\bsf\s*express\b|\bsf\b"#, options: .caseInsensitive), .sfExpress),
-        (makeRegex(#"京东快递|京东物流|京东|\bjd\b"#, options: .caseInsensitive), .jd),
+    ]
+
+    static let standaloneStationHints: [(regex: NSRegularExpression, channel: PickupChannel)] = [
+        (
+            makeRegex(
+                #"(?:^\s*station[\s:：]+[A-Za-z0-9-]+$|^[A-Za-z0-9-]+[\s:：]+station\s*$)"#,
+                options: .caseInsensitive
+            ),
+            .station
+        ),
     ]
 }
 
@@ -845,16 +909,25 @@ private enum Patterns {
     static let standaloneDigits = makeRegex(#"^\d{6,8}$"#)
     static let standaloneAlphanumeric = makeRegex(#"^[A-Za-z]{1,2}\d{4,7}$"#)
 
+    static let stationShelfCode = makeRegex(#"^\d{1,3}-\d{1,2}-\d{3,5}$"#)
+    static let lockerEightDigitCode = makeRegex(#"^\d{8}$"#)
+    static let jdTwoPartCode = makeRegex(#"^[A-Za-z]\d{1,2}-\d{4}$"#)
+    static let sfFourDigitCode = makeRegex(#"^\d{4}$"#)
+
+    private static let standaloneChannelToken = #"(?:多多买菜|多多驿站|多多自提|拼多多|多多|菜鸟驿站|菜鸟裹裹|菜鸟|兔喜|妈妈驿站|近邻宝驿站|校园驿站|驿站|宜小集|丰巢|智能柜|快递柜|自提柜|顺丰速运|顺丰快递|顺丰|京东快递服务站|京东快递站|京东快递|京东物流|京东|\b(?:duoduo(?:\s+station)?|pinduoduo|yixiaoji|iepple|cainiao|sf(?:\s*express)?|jd|(?:smart\s+)?locker|station)\b)"#
+
     static let leadingOrTrailingChannel = makeRegex(
-        #"(?:^(?:多多买菜|多多驿站|多多自提|拼多多|多多|宜小集|菜鸟驿站|菜鸟裹裹|菜鸟|顺丰速运|顺丰快递|顺丰|京东快递|京东物流|京东|\b(?:duoduo(?:\s+station)?|pinduoduo|yixiaoji|iepple|cainiao|sf(?:\s*express)?|jd)\b)[\s:：]*|[\s:：]*(?:多多买菜|多多驿站|多多自提|拼多多|多多|宜小集|菜鸟驿站|菜鸟裹裹|菜鸟|顺丰速运|顺丰快递|顺丰|京东快递|京东物流|京东|\b(?:duoduo(?:\s+station)?|pinduoduo|yixiaoji|iepple|cainiao|sf(?:\s*express)?|jd)\b)$)"#,
+        "(?:^\(standaloneChannelToken)[\\s:：]*|[\\s:：]*\(standaloneChannelToken)$)",
         options: .caseInsensitive
     )
 
+    private static let chineseStationCaptureAndTerminator = #"(?:[（(][^）)\n]{1,10}[）)]\s*)?[【\[]?([^\n，,。；;！!？?（(\[【\]】]+?)[】\]]?(?=\s*(?:领取|取件|取货|取走|尽早取|尽快取|及时取|请及时取|取包裹|取快递|开柜|开箱|自提|凭|取件码|取货码|提货码|开柜码|核销码|已经等很久|已等|等您|滞留|的包裹|[，,。；;！!？?（(\n]|$))"#
+
     static let stationPatterns: [NSRegularExpression] = [
         // High-confidence Chinese arrival verbs first so generic "在3天内..." does not shadow "到<Station>"
-        makeRegex(#"(?:已到达|已送达|已投放至|已存放至|已存入|已入柜|已放入|已放至|已入|已到|到达|送达|投放至|存放至|存入|放至|前往|请到|请至)\s*[【\[]?([^\n，,。；;！!？?（(\[【\]】]+?)[】\]]?(?=\s*(?:领取|取件|取货|开柜|开箱|自提|凭|取件码|取货码|提货码|开柜码|核销码|[，,。；;！!？?（(\n]|$))"#),
+        makeRegex(#"(?:已到达|已送达|已投放至|已存放至|已存入|已入柜|已放入|已放至|已入|已到|到达|送达|投放至|存放至|存入|放至|前往|请到|请至)\s*"# + chineseStationCaptureAndTerminator),
         // Fallback Chinese location prepositions: skip temporal clauses like "在3天内..." so "到<Station>" still matches
-        makeRegex(#"(?:到|至|在)(?!\s*(?:\d+\s*(?:天|日|小时|分钟|月)|(?:19|20)\d{2}[-/.年]|今[天日]|明[天日]))\s*[【\[]?([^\n，,。；;！!？?（(\[【\]】]+?)[】\]]?(?=\s*(?:领取|取件|取货|开柜|开箱|自提|凭|取件码|取货码|提货码|开柜码|核销码|[，,。；;！!？?（(\n]|$))"#),
+        makeRegex(#"(?:到|至|在)(?!\s*(?:\d+\s*(?:天|日|小时|分钟|月)|(?:19|20)\d{2}[-/.年]|今[天日]|明[天日]))\s*"# + chineseStationCaptureAndTerminator),
         // English station clauses: "arrived at North Pickup Point", "ready at Demo Locker"
         makeRegex(#"\b(?:arrived at|ready at|delivered to|stored at|available at|at)\s+([A-Za-z0-9][A-Za-z0-9\s#-]{1,39}?)(?=\s*(?:[.,;!\n\(]|\b(?:pickup|pick-up|locker|collection)?\s*code\b|\bwith\b|$))"#, options: .caseInsensitive),
     ]

@@ -45,6 +45,22 @@
         }
       }
     },
+    "Account" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Account"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "账号"
+          }
+        }
+      }
+    },
     "Add" : {
       "localizations" : {
         "en" : {
@@ -141,54 +157,6 @@
         }
       }
     },
-    "Back" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Back"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "返回"
-          }
-        }
-      }
-    },
-    "Cainiao" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cainiao"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "菜鸟"
-          }
-        }
-      }
-    },
-    "Can’t Load Yixiaoji" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Can’t Load Yixiaoji"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "无法载入宜小集"
-          }
-        }
-      }
-    },
     "Can’t Open Duoduo" : {
       "localizations" : {
         "en" : {
@@ -201,6 +169,38 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "无法打开多多驿站"
+          }
+        }
+      }
+    },
+    "Change" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Change"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "切换"
+          }
+        }
+      }
+    },
+    "Change channel" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Change channel"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "切换渠道"
           }
         }
       }
@@ -269,6 +269,38 @@
         }
       }
     },
+    "Choose Locker" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose Locker"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "选择快递柜"
+          }
+        }
+      }
+    },
+    "Choose the locker in front of you before opening." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose the locker in front of you before opening."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "开柜前请先选择面前的快递柜。"
+          }
+        }
+      }
+    },
     "Clear" : {
       "localizations" : {
         "en" : {
@@ -281,6 +313,70 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "清除"
+          }
+        }
+      }
+    },
+    "Collect your parcel and close the door." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Collect your parcel and close the door."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请取走包裹并关好柜门。"
+          }
+        }
+      }
+    },
+    "Compartment" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Compartment"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "格口编号"
+          }
+        }
+      }
+    },
+    "Complete payment in Yixiaoji on WeChat, then open again." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Complete payment in Yixiaoji on WeChat, then open again."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请前往微信宜小集完成缴费后再开柜。"
+          }
+        }
+      }
+    },
+    "Copied" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copied"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已复制"
           }
         }
       }
@@ -301,18 +397,34 @@
         }
       }
     },
-    "Copy again" : {
+    "Copy" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Copy again"
+            "value" : "Copy"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "再次复制"
+            "value" : "复制"
+          }
+        }
+      }
+    },
+    "Copy Pickup Code" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copy Pickup Code"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "复制取件码"
           }
         }
       }
@@ -329,22 +441,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "复制取件码"
-          }
-        }
-      }
-    },
-    "Copy pickup code and open Yixiaoji" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Copy pickup code and open Yixiaoji"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "复制取件码并打开宜小集"
           }
         }
       }
@@ -397,6 +493,22 @@
         }
       }
     },
+    "Couldn’t Open Locker" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn’t Open Locker"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法开柜"
+          }
+        }
+      }
+    },
     "Couldn’t Save Parcels" : {
       "localizations" : {
         "en" : {
@@ -409,6 +521,118 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "无法保存包裹"
+          }
+        }
+      }
+    },
+    "Couldn’t Sync Yixiaoji" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn’t Sync Yixiaoji"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法同步宜小集"
+          }
+        }
+      }
+    },
+    "Couldn’t open the locker. Check the selected locker and try again." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn’t open the locker. Check the selected locker and try again."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "开柜失败，请核对所选快递柜后重试。"
+          }
+        }
+      }
+    },
+    "Couldn’t reach Yixiaoji. Check your connection and try again." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn’t reach Yixiaoji. Check your connection and try again."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法连接宜小集，请检查网络后重试。"
+          }
+        }
+      }
+    },
+    "Couldn’t reach Yixiaoji. Check your connection." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn’t reach Yixiaoji. Check your connection."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法连接宜小集，请检查网络。"
+          }
+        }
+      }
+    },
+    "Couldn’t sign in. Check your connection and try again." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn’t sign in. Check your connection and try again."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法登录，请检查网络后重试。"
+          }
+        }
+      }
+    },
+    "Couldn’t sign in. Please try again." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn’t sign in. Please try again."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法登录，请重试。"
+          }
+        }
+      }
+    },
+    "Couldn’t sync Yixiaoji parcels." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn’t sync Yixiaoji parcels."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法同步宜小集包裹。"
           }
         }
       }
@@ -461,34 +685,18 @@
         }
       }
     },
-    "Dismiss" : {
+    "Done" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dismiss"
+            "value" : "Done"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "关闭"
-          }
-        }
-      }
-    },
-    "Duoduo Station" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Duoduo Station"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "多多驿站"
+            "value" : "完成"
           }
         }
       }
@@ -573,18 +781,18 @@
         }
       }
     },
-    "Home" : {
+    "Invalid account or password." : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Home"
+            "value" : "Invalid account or password."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "主页"
+            "value" : "账号或密码不正确。"
           }
         }
       }
@@ -617,6 +825,86 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "继续编辑"
+          }
+        }
+      }
+    },
+    "Locker" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Locker"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "快递柜"
+          }
+        }
+      }
+    },
+    "Locker Opened" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Locker Opened"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "柜门已打开"
+          }
+        }
+      }
+    },
+    "Locker parcels are up to date." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Locker parcels are up to date."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "快递柜包裹已是最新。"
+          }
+        }
+      }
+    },
+    "Mark as Picked Up" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mark as Picked Up"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "标记已取件"
+          }
+        }
+      }
+    },
+    "Matched to this parcel’s locker" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Matched to this parcel’s locker"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已匹配该包裹所在快递柜"
           }
         }
       }
@@ -701,6 +989,22 @@
         }
       }
     },
+    "Not Signed In" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not Signed In"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未登录"
+          }
+        }
+      }
+    },
     "Note" : {
       "localizations" : {
         "en" : {
@@ -733,6 +1037,22 @@
         }
       }
     },
+    "Open Again" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open Again"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "再次开柜"
+          }
+        }
+      }
+    },
     "Open Duoduo Station" : {
       "localizations" : {
         "en" : {
@@ -745,6 +1065,70 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "打开多多驿站"
+          }
+        }
+      }
+    },
+    "Open Locker" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open Locker"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "开柜"
+          }
+        }
+      }
+    },
+    "Open Yixiaoji in Safari" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open Yixiaoji in Safari"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在 Safari 中打开宜小集"
+          }
+        }
+      }
+    },
+    "Open locker controls" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open locker controls"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "打开快递柜开柜面板"
+          }
+        }
+      }
+    },
+    "Opening Locker…" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Opening Locker…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在开柜…"
           }
         }
       }
@@ -797,18 +1181,34 @@
         }
       }
     },
-    "Parcels" : {
+    "Overdue Fee Required" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Parcels"
+            "value" : "Overdue Fee Required"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "包裹"
+            "value" : "需要缴纳超期费"
+          }
+        }
+      }
+    },
+    "Overdue by %@ days." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Overdue by %@ days."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已超期 %@ 天。"
           }
         }
       }
@@ -845,18 +1245,18 @@
         }
       }
     },
-    "Paste it on the page to open the locker." : {
+    "Password" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Paste it on the page to open the locker."
+            "value" : "Password"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "在网页中粘贴即可开柜。"
+            "value" : "密码"
           }
         }
       }
@@ -893,6 +1293,22 @@
         }
       }
     },
+    "Phone or username" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Phone or username"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "手机号或用户名"
+          }
+        }
+      }
+    },
     "Picked Up" : {
       "localizations" : {
         "en" : {
@@ -925,18 +1341,18 @@
         }
       }
     },
-    "Pickup Code Copied" : {
+    "Pickup Point" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Pickup Code Copied"
+            "value" : "Pickup Point"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "取件码已复制"
+            "value" : "取件点"
           }
         }
       }
@@ -973,18 +1389,18 @@
         }
       }
     },
-    "Reload" : {
+    "Pull down on the Pending list to sync Yixiaoji locker parcels." : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Reload"
+            "value" : "Pull down on the Pending list to sync Yixiaoji locker parcels."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "重新载入"
+            "value" : "在待取列表下拉即可同步宜小集快递柜包裹。"
           }
         }
       }
@@ -1037,6 +1453,38 @@
         }
       }
     },
+    "Selected locker for opening" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Selected locker for opening"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "当前选择的开柜站点"
+          }
+        }
+      }
+    },
+    "Session Expired" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Session Expired"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "登录已过期"
+          }
+        }
+      }
+    },
     "Settings" : {
       "localizations" : {
         "en" : {
@@ -1053,6 +1501,134 @@
         }
       }
     },
+    "Sign In" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sign In"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "登录"
+          }
+        }
+      }
+    },
+    "Sign In Again" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sign In Again"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重新登录"
+          }
+        }
+      }
+    },
+    "Sign In to Yixiaoji" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sign In to Yixiaoji"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "登录宜小集"
+          }
+        }
+      }
+    },
+    "Sign Out" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sign Out"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "退出登录"
+          }
+        }
+      }
+    },
+    "Sign in to Yixiaoji to open lockers." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sign in to Yixiaoji to open lockers."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请先登录宜小集再开柜。"
+          }
+        }
+      }
+    },
+    "Sign in to Yixiaoji to select a locker and open the door directly." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sign in to Yixiaoji to select a locker and open the door directly."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "登录宜小集后可直接选柜并一键开柜。"
+          }
+        }
+      }
+    },
+    "Sign in to sync locker parcels and open doors directly without a browser." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sign in to sync locker parcels and open doors directly without a browser."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "登录后可直接同步快递柜包裹并一键开柜，无需打开网页。"
+          }
+        }
+      }
+    },
+    "Signed In" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Signed In"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已登录"
+          }
+        }
+      }
+    },
     "Station" : {
       "localizations" : {
         "en" : {
@@ -1064,23 +1640,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "取件点"
-          }
-        }
-      }
-    },
-    "Stop Loading" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Stop Loading"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "停止载入"
+            "value" : "驿站"
           }
         }
       }
@@ -1097,6 +1657,66 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "在包裹上向左轻扫即可恢复。"
+          }
+        }
+      }
+    },
+    "Sync Locker Parcels" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sync Locker Parcels"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "立即同步快递柜包裹"
+          }
+        }
+      }
+    },
+    "Synced %lld locker parcels." : {
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Synced 1 locker parcel."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Synced %lld locker parcels."
+                }
+              }
+            }
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已同步 %lld 个快递柜包裹。"
+          }
+        }
+      }
+    },
+    "Syncing…" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Syncing…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "同步中…"
           }
         }
       }
@@ -1213,18 +1833,98 @@
         }
       }
     },
-    "Yixiaoji" : {
+    "Yixiaoji Account" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Yixiaoji"
+            "value" : "Yixiaoji Account"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "宜小集"
+            "value" : "宜小集账号"
+          }
+        }
+      }
+    },
+    "Yixiaoji Locker" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yixiaoji Locker"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "宜小集快递柜"
+          }
+        }
+      }
+    },
+    "Yixiaoji session expired. Please sign in again." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yixiaoji session expired. Please sign in again."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "宜小集登录已过期，请重新登录。"
+          }
+        }
+      }
+    },
+    "Your Yixiaoji session expired. Please sign in again in Settings." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your Yixiaoji session expired. Please sign in again in Settings."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "宜小集登录已过期，请前往设置重新登录。"
+          }
+        }
+      }
+    },
+    "Your Yixiaoji session expired. Please sign in again." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your Yixiaoji session expired. Please sign in again."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "宜小集登录已过期，请重新登录。"
+          }
+        }
+      }
+    },
+    "Your Yixiaoji session is stored only in iOS Keychain on this iPhone." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your Yixiaoji session is stored only in iOS Keychain on this iPhone."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "宜小集登录凭证仅保存在本机 iOS 钥匙串中。"
           }
         }
       }

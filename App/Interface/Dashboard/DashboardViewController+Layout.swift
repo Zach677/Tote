@@ -17,13 +17,13 @@ extension DashboardViewController {
         settingsItem.accessibilityLabel = String(localized: "Settings")
         navigationItem.leftBarButtonItem = settingsItem
 
-        let addItem = UIBarButtonItem(
-            image: UIImage(systemName: "plus"),
-            style: .prominent,
-            target: self,
-            action: #selector(handleAddTapped)
+        let addItem = UIBarButtonItem.prominentIconItem(
+            systemName: "plus",
+            accessibilityLabel: String(localized: "Add Parcel"),
+            primaryAction: UIAction { [weak self] _ in
+                self?.handleAddTapped()
+            }
         )
-        addItem.accessibilityLabel = String(localized: "Add Parcel")
         navigationItem.rightBarButtonItem = addItem
     }
 
@@ -32,6 +32,8 @@ extension DashboardViewController {
         collectionView.translatesAutoresizingMaskIntoConstraints = false
         collectionView.backgroundColor = .systemGroupedBackground
         collectionView.delegate = self
+        refreshControl.addTarget(self, action: #selector(handlePullToRefresh), for: .valueChanged)
+        collectionView.refreshControl = refreshControl
         setCollectionView(collectionView)
     }
 

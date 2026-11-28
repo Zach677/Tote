@@ -35,6 +35,7 @@ Xcode uses file-system synchronized groups. Adding a file to a folder does not n
 - Prefer concrete defaults over optionals: `var onTap: () -> Void = {}`, `Date = .distantPast`, an `.idle` enum case.
 - Add comments only when the reason is not obvious from the code.
 - Check Apple documentation for new or changed APIs. Do not rely on memory for availability or signatures.
+- Do not add backward-compatibility shims or storage/schema migrations before public launch (see D8 in `docs/DECISIONS.md`).
 
 ## UIKit
 

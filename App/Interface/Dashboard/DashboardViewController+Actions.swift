@@ -26,13 +26,74 @@ extension DashboardViewController {
         presentQuickAdd()
     }
 
+    @objc func handlePullToRefresh() {
+        syncTask?.cancel()
+        syncTask = Task { [weak self] in
+            await self?.syncYixiaojiIfSignedIn()
+        }
+    }
+
+    @discardableResult
+    func syncYixiaojiIfSignedIn() async -> AddParcelsResult? {
+        defer {
+            if refreshControl.isRefreshing {
+                refreshControl.endRefreshing()
+            }
+        }
+
+        guard dependencies.yixiaoji.currentSession != nil else {
+            reloadParcels(animatingDifferences: false)
+            return nil
+        }
+
+        do {
+            let remote = try await dependencies.yixiaoji.fetchPendingParcels()
+            let result = try dependencies.parcelStore.syncSyncedParcels(remote.map { $0.makeDraft() })
+            reloadParcels(animatingDifferences: true)
+            return result
+        } catch let apiError as YixiaojiAPIError {
+            presentYixiaojiSyncErrorAlert(apiError)
+            return nil
+        } catch {
+            presentStoreErrorAlert(title: String(localized: "Couldn’t Sync Yixiaoji"))
+            return nil
+        }
+    }
+
     func presentSettings() {
         let settingsController = SettingsViewController(dependencies: dependencies)
+        settingsController.onParcelsChanged = { [weak self] in
+            self?.reloadParcels(animatingDifferences: true)
+        }
         let navigationController = UINavigationController(rootViewController: settingsController)
         if let sheet = navigationController.sheetPresentationController {
-            sheet.detents = [.medium()]
+            sheet.detents = [.large()]
             sheet.prefersGrabberVisible = true
         }
+        present(navigationController, animated: true)
+    }
+
+    func presentLockerUnlock(for parcel: Parcel) {
+        lastPresentedLockerParcel = parcel
+        if let onOpenLocker {
+            onOpenLocker(parcel)
+            return
+        }
+
+        let unlockController = LockerUnlockViewController(parcel: parcel, dependencies: dependencies)
+        unlockController.onParcelUpdated = { [weak self] _ in
+            self?.reloadParcels(animatingDifferences: false)
+        }
+        unlockController.onMarkPickedUp = { [weak self] parcelID in
+            self?.markParcelPickedUp(id: parcelID)
+        }
+
+        let navigationController = UINavigationController(rootViewController: unlockController)
+        if let sheet = navigationController.sheetPresentationController {
+            sheet.detents = [.medium(), .large()]
+            sheet.prefersGrabberVisible = true
+        }
+        guard presentedViewController == nil, viewIfLoaded?.window != nil else { return }
         present(navigationController, animated: true)
     }
 
@@ -200,9 +261,8 @@ private extension DashboardViewController {
             return
         }
 
-        if parcel.channel == .yixiaoji {
-            copyWithFeedback(parcel.pickupCode, sourceView: sourceView, showToast: false, announce: false)
-            onOpenYixiaoji(parcel.pickupCode)
+        if parcel.channel == .locker {
+            presentLockerUnlock(for: parcel)
             return
         }
 
@@ -240,6 +300,40 @@ private extension DashboardViewController {
         }
         let okAction = UIAlertAction(title: String(localized: "OK"), style: .default)
         alert.addAction(settingsAction)
+        alert.addAction(okAction)
+        alert.preferredAction = okAction
+        presentAlertIfPossible(alert)
+    }
+
+    func presentYixiaojiSyncErrorAlert(_ error: YixiaojiAPIError) {
+        let title: String
+        let message: String
+        let showSettings: Bool
+
+        switch error {
+        case .sessionExpired, .notSignedIn:
+            title = String(localized: "Session Expired")
+            message = String(localized: "Your Yixiaoji session expired. Please sign in again in Settings.")
+            showSettings = true
+        case let .serverError(serverMessage), let .invalidCredentials(serverMessage):
+            title = String(localized: "Couldn’t Sync Yixiaoji")
+            message = serverMessage.isEmpty ? String(localized: "Please try again.") : serverMessage
+            showSettings = false
+        case .invalidResponse, .networkError:
+            title = String(localized: "Couldn’t Sync Yixiaoji")
+            message = String(localized: "Check your connection, then try again.")
+            showSettings = false
+        }
+
+        let alert = UIAlertController(title: title, message: message, preferredStyle: .alert)
+        if showSettings {
+            alert.addAction(
+                UIAlertAction(title: String(localized: "Settings"), style: .default) { [weak self] _ in
+                    self?.presentSettings()
+                }
+            )
+        }
+        let okAction = UIAlertAction(title: String(localized: "OK"), style: .default)
         alert.addAction(okAction)
         alert.preferredAction = okAction
         presentAlertIfPossible(alert)

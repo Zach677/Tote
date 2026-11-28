@@ -141,6 +141,87 @@ public struct ParcelStore: Sendable {
         )
     }
 
+    /// Merges synced remote parcels into the local store, enriching matching pending entries
+    /// when remote metadata (cabinet name, MAC, site ID, or tracking number) was missing locally.
+    public func syncSyncedParcels(_ drafts: [ParsedParcelDraft]) throws -> AddParcelsResult {
+        let validDrafts = drafts.filter(\.isValid)
+        guard !validDrafts.isEmpty else {
+            return AddParcelsResult()
+        }
+
+        var parcels = try load()
+        let deduplicator = ParcelDeduplicator()
+        let timestamp = now()
+
+        var addedIDs: [UUID] = []
+        var updatedIDs: [UUID] = []
+        var skippedDuplicateCount = 0
+        var firstAffectedID: UUID?
+
+        for draft in validDrafts {
+            let kind = deduplicator.classify(draft, against: parcels)
+            switch kind {
+            case .new:
+                let parcel = draft.makeParcel(source: .synced, now: timestamp)
+                parcels.append(parcel)
+                addedIDs.append(parcel.id)
+                if firstAffectedID == nil {
+                    firstAffectedID = parcel.id
+                }
+            case let .upgradeTrackingOnly(existingID):
+                guard let index = parcels.firstIndex(where: { $0.id == existingID }) else {
+                    continue
+                }
+                parcels[index] = deduplicator.merge(draft, into: parcels[index], updatedAt: timestamp)
+                if !addedIDs.contains(existingID), !updatedIDs.contains(existingID) {
+                    updatedIDs.append(existingID)
+                }
+                if firstAffectedID == nil {
+                    firstAffectedID = existingID
+                }
+            case let .duplicate(existingID):
+                guard let index = parcels.firstIndex(where: { $0.id == existingID }) else {
+                    skippedDuplicateCount += 1
+                    continue
+                }
+                let existing = parcels[index]
+                let merged = deduplicator.merge(draft, into: existing, updatedAt: timestamp)
+                let changedMetadata = merged.stationLabel != existing.stationLabel
+                    || merged.trackingNumber != existing.trackingNumber
+                    || merged.lockerMAC != existing.lockerMAC
+                    || merged.lockerSiteID != existing.lockerSiteID
+                    || merged.channel != existing.channel
+                    || merged.pickupCode != existing.pickupCode
+                if changedMetadata {
+                    parcels[index] = merged
+                    if !addedIDs.contains(existingID), !updatedIDs.contains(existingID) {
+                        updatedIDs.append(existingID)
+                    }
+                    if firstAffectedID == nil {
+                        firstAffectedID = existingID
+                    }
+                } else {
+                    skippedDuplicateCount += 1
+                }
+            }
+        }
+
+        if !addedIDs.isEmpty || !updatedIDs.isEmpty {
+            try saveParcelsToDisk(parcels)
+        }
+
+        let byID = Dictionary(parcels.map { ($0.id, $0) }, uniquingKeysWith: { _, latest in latest })
+        let added = addedIDs.compactMap { byID[$0] }
+        let updated = updatedIDs.compactMap { byID[$0] }
+
+        return AddParcelsResult(
+            added: added,
+            updated: updated,
+            skippedDuplicateCount: skippedDuplicateCount,
+            firstAffectedID: firstAffectedID
+        )
+    }
+
     @discardableResult
     public func update(_ parcel: Parcel) throws -> [Parcel] {
         guard parcel.isValid else {

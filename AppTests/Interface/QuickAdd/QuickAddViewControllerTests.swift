@@ -28,7 +28,7 @@ struct QuickAddViewControllerTests {
 
         let existing = try env.store.add(
             [
-                ParsedParcelDraft(pickupCode: "12-3-0000", channel: .duoduo, stationLabel: "North Pickup Point"),
+                ParsedParcelDraft(pickupCode: "12-3-0000", channel: .station, stationLabel: "North Pickup Point"),
             ],
             source: .pasted
         ).added
@@ -113,7 +113,7 @@ struct QuickAddViewControllerTests {
         defer { env.cleanup() }
 
         let existing = [
-            Parcel(pickupCode: "12-3-0000", channel: .duoduo, stationLabel: "North Pickup Point"),
+            Parcel(pickupCode: "12-3-0000", channel: .station, stationLabel: "North Pickup Point"),
         ]
         let controller = QuickAddViewController(
             dependencies: env.dependencies,
@@ -156,7 +156,7 @@ struct QuickAddViewControllerTests {
         }
 
         #expect(controller.drafts.count == 1)
-        #expect(controller.drafts.first?.channel == .cainiao)
+        #expect(controller.drafts.first?.channel == .station)
         #expect(controller.drafts.first?.pickupCode == "4-2-1048")
     }
 
@@ -166,7 +166,7 @@ struct QuickAddViewControllerTests {
         defer { env.cleanup() }
 
         let existing = try env.store.add(
-            [ParsedParcelDraft(pickupCode: "12-3-0000", channel: .duoduo)],
+            [ParsedParcelDraft(pickupCode: "12-3-0000", channel: .station)],
             source: .pasted
         ).added
 
@@ -179,12 +179,42 @@ struct QuickAddViewControllerTests {
         }
         controller.loadViewIfNeeded()
 
-        let duplicateDraft = ParsedParcelDraft(pickupCode: "12-3-0000", channel: .duoduo)
+        let duplicateDraft = ParsedParcelDraft(pickupCode: "12-3-0000", channel: .station)
         let result = try #require(controller.commitManualDraft(duplicateDraft))
         #expect(result.added.isEmpty)
         #expect(result.updated.isEmpty)
         #expect(result.skippedDuplicateCount == 1)
         #expect(!completionCalled)
         #expect(try env.store.load().count == 1)
+    }
+
+    @Test
+    func oneTapChannelSwitchReclassifiesDraftAndReevaluatesDuplicates() throws {
+        let env = TestEnvironment()
+        defer { env.cleanup() }
+
+        let existing = [
+            Parcel(pickupCode: "884210", channel: .locker),
+        ]
+        let controller = QuickAddViewController(
+            dependencies: env.dependencies,
+            existingParcels: existing
+        ) { _ in }
+        controller.loadViewIfNeeded()
+
+        controller.updateInputText("884210")
+        let draft = try #require(controller.drafts.first)
+        #expect(draft.channel == .other)
+        #expect(controller.duplicateCount == 0)
+
+        controller.updateDraftChannel(id: draft.id, channel: .locker)
+        #expect(controller.drafts.first?.channel == .locker)
+        #expect(controller.duplicateCount == 1)
+        #expect(controller.addableDrafts.isEmpty)
+
+        controller.updateDraftChannel(id: draft.id, channel: .station)
+        #expect(controller.drafts.first?.channel == .station)
+        #expect(controller.duplicateCount == 0)
+        #expect(controller.addableDrafts.count == 1)
     }
 }

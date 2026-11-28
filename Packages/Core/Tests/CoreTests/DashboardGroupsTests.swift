@@ -8,14 +8,14 @@ struct DashboardGroupsTests {
     func channelSectionOrderAndOmission() {
         let baseDate = Date(timeIntervalSince1970: 1_700_000_000)
         let parcels = [
+            Parcel(pickupCode: "3-2-0091", channel: .sfExpress, createdAt: baseDate),
             Parcel(pickupCode: "5-1-2207", channel: .jd, createdAt: baseDate),
-            Parcel(pickupCode: "12-3-0000", channel: .duoduo, createdAt: baseDate),
-            Parcel(pickupCode: "4-2-1048", channel: .cainiao, createdAt: baseDate),
-            Parcel(pickupCode: "A03-8821", channel: .yixiaoji, createdAt: baseDate),
+            Parcel(pickupCode: "12-3-0000", channel: .station, createdAt: baseDate),
+            Parcel(pickupCode: "A03-8821", channel: .locker, createdAt: baseDate),
         ]
 
         let groups = DashboardGroups(parcels: parcels)
-        #expect(groups.channelSections.map(\.channel) == [.duoduo, .yixiaoji, .cainiao, .jd])
+        #expect(groups.channelSections.map(\.channel) == [.station, .locker, .jd, .sfExpress])
         #expect(groups.awaitingCode.isEmpty)
         #expect(groups.pickedUp.isEmpty)
         #expect(groups.pendingCount == 4)
@@ -30,14 +30,14 @@ struct DashboardGroupsTests {
         let lowID = try #require(UUID(uuidString: "00000000-0000-0000-0000-000000000001"))
         let highID = try #require(UUID(uuidString: "00000000-0000-0000-0000-000000000002"))
 
-        let older = Parcel(pickupCode: "1-0-0001", channel: .duoduo, createdAt: olderDate)
-        let newerHigh = Parcel(id: highID, pickupCode: "1-0-0003", channel: .duoduo, createdAt: newerDate)
-        let newerLow = Parcel(id: lowID, pickupCode: "1-0-0002", channel: .duoduo, createdAt: newerDate)
+        let older = Parcel(pickupCode: "1-0-0001", channel: .station, createdAt: olderDate)
+        let newerHigh = Parcel(id: highID, pickupCode: "1-0-0003", channel: .station, createdAt: newerDate)
+        let newerLow = Parcel(id: lowID, pickupCode: "1-0-0002", channel: .station, createdAt: newerDate)
 
         let groups = DashboardGroups(parcels: [older, newerHigh, newerLow])
-        let duoduoSection = try #require(groups.channelSections.first)
+        let stationSection = try #require(groups.channelSections.first)
 
-        #expect(duoduoSection.parcels.map(\.id) == [lowID, highID, older.id])
+        #expect(stationSection.parcels.map(\.id) == [lowID, highID, older.id])
     }
 
     @Test("Separates tracking-only pending parcels into awaitingCode sorted newest-first")
@@ -47,11 +47,11 @@ struct DashboardGroupsTests {
 
         let olderTracking = Parcel(trackingNumber: "YT0000000000000", channel: .other, createdAt: t1)
         let newerTracking = Parcel(trackingNumber: "SF0000000000000", channel: .sfExpress, createdAt: t2)
-        let coded = Parcel(pickupCode: "12-3-0000", trackingNumber: "JD0000000000000", channel: .duoduo, createdAt: t1)
+        let coded = Parcel(pickupCode: "12-3-0000", trackingNumber: "JD0000000000000", channel: .station, createdAt: t1)
 
         let groups = DashboardGroups(parcels: [olderTracking, coded, newerTracking])
 
-        #expect(groups.channelSections.map(\.channel) == [.duoduo])
+        #expect(groups.channelSections.map(\.channel) == [.station])
         #expect(groups.awaitingCode.map(\.trackingNumber) == ["SF0000000000000", "YT0000000000000"])
         #expect(groups.pendingCount == 3)
     }
@@ -65,13 +65,13 @@ struct DashboardGroupsTests {
 
         let firstPicked = Parcel(
             pickupCode: "4-2-1048",
-            channel: .cainiao,
+            channel: .locker,
             status: .pickedUp(at: pickedEarlier),
             createdAt: createdNew
         )
         let secondPicked = Parcel(
             pickupCode: "12-3-0000",
-            channel: .duoduo,
+            channel: .station,
             status: .pickedUp(at: pickedLater),
             createdAt: createdOld
         )

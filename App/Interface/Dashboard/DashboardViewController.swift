@@ -8,18 +8,22 @@ final class DashboardViewController: UIViewController {
     }
 
     let dependencies: AppDependencies
-    var onOpenYixiaoji: (String) -> Void = { _ in }
+    var onOpenLocker: ((Parcel) -> Void)?
 
     var selectedSegment: Segment = .pending
     private(set) var parcels: [Parcel] = []
     private(set) var groups = DashboardGroups()
     var parcelsByID: [Parcel.ID: Parcel] = [:]
+    var lastPresentedLockerParcel: Parcel?
+    private(set) var pendingLoadErrorTitle: String?
+    var syncTask: Task<Void, Never>?
 
     let segmentedControl = UISegmentedControl(items: [
         String(localized: "Pending"),
         String(localized: "Picked Up"),
     ])
     let copyToastView = CopyToastView()
+    let refreshControl = UIRefreshControl()
     private(set) var collectionView: UICollectionView!
     var dataSource: UICollectionViewDiffableDataSource<DashboardSection, DashboardItem>!
 
@@ -33,6 +37,10 @@ final class DashboardViewController: UIViewController {
         fatalError("init(coder:) has not been implemented")
     }
 
+    deinit {
+        syncTask?.cancel()
+    }
+
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = .systemGroupedBackground
@@ -43,16 +51,30 @@ final class DashboardViewController: UIViewController {
         reloadParcels(animatingDifferences: false)
     }
 
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        guard viewIfLoaded?.window != nil, let title = pendingLoadErrorTitle else { return }
+        pendingLoadErrorTitle = nil
+        presentStoreErrorAlert(title: title)
+    }
+
     func reloadParcels(animatingDifferences: Bool, scrollToParcelID: Parcel.ID? = nil) {
         do {
             let loaded = try dependencies.parcelStore.load()
+            pendingLoadErrorTitle = nil
             applyLoadedParcels(
                 loaded,
                 animatingDifferences: animatingDifferences,
                 scrollToParcelID: scrollToParcelID
             )
         } catch {
-            presentStoreErrorAlert(title: String(localized: "Couldn’t Load Parcels"))
+            let title = String(localized: "Couldn’t Load Parcels")
+            if viewIfLoaded?.window != nil {
+                pendingLoadErrorTitle = nil
+                presentStoreErrorAlert(title: title)
+            } else {
+                pendingLoadErrorTitle = title
+            }
         }
     }
 

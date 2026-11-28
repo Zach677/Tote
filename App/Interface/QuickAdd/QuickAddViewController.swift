@@ -120,6 +120,15 @@ final class QuickAddViewController: UIViewController {
         applySnapshot(animatingDifferences: false)
     }
 
+    func updateDraftChannel(id: UUID, channel: PickupChannel) {
+        guard let index = drafts.firstIndex(where: { $0.id == id }) else { return }
+        guard drafts[index].channel != channel else { return }
+        drafts[index].channel = channel
+        classifiedDrafts = dependencies.deduplicator.classify(drafts, against: existingParcels)
+        updateActionState()
+        applySnapshot(animatingDifferences: false)
+    }
+
     @discardableResult
     func commitParsedDrafts() -> AddParcelsResult? {
         let toAdd = addableDrafts
@@ -197,6 +206,7 @@ private extension QuickAddViewController {
             target: self,
             action: #selector(handleAddTapped)
         )
+        addButton.applyProminentTitleContrast()
         addButton.isEnabled = false
         navigationItem.rightBarButtonItem = addButton
     }
@@ -379,10 +389,16 @@ private extension QuickAddViewController {
             if isDuplicate {
                 content.secondaryText = String(localized: "Already in your list")
             } else {
-                let parts = [draft.channel.localizedName, draft.stationLabel, draft.note]
+                let parts = [draft.stationLabel, draft.note]
                     .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
                     .filter { !$0.isEmpty }
-                content.secondaryText = parts.joined(separator: " · ")
+                if !parts.isEmpty {
+                    content.secondaryText = parts.joined(separator: " · ")
+                } else if draft.hasPickupCode, draft.hasTrackingNumber {
+                    content.secondaryText = draft.trackingNumber
+                } else {
+                    content.secondaryText = nil
+                }
             }
             content.secondaryTextProperties.font = .preferredFont(forTextStyle: .subheadline)
             content.secondaryTextProperties.color = .secondaryLabel
@@ -392,7 +408,51 @@ private extension QuickAddViewController {
             listCell.contentView.alpha = isDuplicate ? 0.45 : 1.0
         }
 
-        cell.accessories = isDuplicate ? [] : [.disclosureIndicator()]
+        if isDuplicate {
+            cell.accessories = []
+        } else {
+            let channelButton = makeChannelSwitcherButton(for: draft)
+            let channelAccessory = UICellAccessory.customView(
+                configuration: .init(customView: channelButton, placement: .trailing(displayed: .always))
+            )
+            cell.accessories = [channelAccessory, .disclosureIndicator()]
+        }
+    }
+
+    func makeChannelSwitcherButton(for draft: ParsedParcelDraft) -> UIButton {
+        let button = UIButton(type: .system)
+        var config = UIButton.Configuration.tinted()
+        config.cornerStyle = .capsule
+        config.baseForegroundColor = draft.channel.tintColor
+        config.baseBackgroundColor = draft.channel.tintColor
+        config.image = UIImage(
+            systemName: "chevron.up.chevron.down",
+            withConfiguration: UIImage.SymbolConfiguration(textStyle: .caption2, scale: .small)
+        )
+        config.imagePlacement = .trailing
+        config.imagePadding = 4
+        config.contentInsets = NSDirectionalEdgeInsets(top: 5, leading: 10, bottom: 5, trailing: 10)
+        var titleAttr = AttributedString(draft.channel.localizedName)
+        titleAttr.font = UIFont.preferredFont(forTextStyle: .caption1)
+        config.attributedTitle = titleAttr
+        button.configuration = config
+        button.showsMenuAsPrimaryAction = true
+        button.menu = makeDraftChannelMenu(for: draft)
+        button.accessibilityLabel = String(localized: "Change channel")
+        return button
+    }
+
+    func makeDraftChannelMenu(for draft: ParsedParcelDraft) -> UIMenu {
+        let actions = PickupChannel.allCases.map { channel in
+            UIAction(
+                title: channel.localizedName,
+                image: channel.symbolImage(),
+                state: channel == draft.channel ? .on : .off
+            ) { [weak self] _ in
+                self?.updateDraftChannel(id: draft.id, channel: channel)
+            }
+        }
+        return UIMenu(options: .singleSelection, children: actions)
     }
 
     func applySnapshot(animatingDifferences: Bool) {

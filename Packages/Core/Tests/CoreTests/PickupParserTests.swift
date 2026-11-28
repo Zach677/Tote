@@ -6,40 +6,40 @@ import Testing
 struct PickupParserTests {
     private let parser = PickupParser()
 
-    // MARK: - All Six Channels
+    // MARK: - All Five Physical Groups
 
-    @Test("Parses all six channels with station labels and codes")
-    func parsesAllSixChannels() throws {
+    @Test("Parses all five channels with station labels and codes")
+    func parsesAllFiveChannels() throws {
         let cases: [(text: String, channel: PickupChannel, code: String, station: String)] = [
             (
                 "【多多驿站】您的包裹已到达Demo Station B，取件码12-3-0000，请及时领取。",
-                .duoduo,
+                .station,
                 "12-3-0000",
                 "Demo Station B"
             ),
             (
                 "【宜小集】您的包裹已存入Sample Locker A1，凭开柜码A03-8821开柜。",
-                .yixiaoji,
+                .locker,
                 "A03-8821",
                 "Sample Locker A1"
             ),
             (
                 "【菜鸟驿站】您的包裹已到North Pickup Point，凭取件码4-2-1048领取。",
-                .cainiao,
+                .station,
                 "4-2-1048",
                 "North Pickup Point"
-            ),
-            (
-                "【顺丰速运】您的快件SF0000000000000已存放至West Gate Locker，取件码3-2-0091。",
-                .sfExpress,
-                "3-2-0091",
-                "West Gate Locker"
             ),
             (
                 "【京东快递】您的包裹JD0000000000000已送达South Station，提货码5-1-2207。",
                 .jd,
                 "5-1-2207",
                 "South Station"
+            ),
+            (
+                "【顺丰速运】您的快件SF0000000000000已存放至West Gate Point，取件码3-2-0091。",
+                .sfExpress,
+                "3-2-0091",
+                "West Gate Point"
             ),
             (
                 "【校园快递点】您的包裹已到达East Point，核销码C2-15-08，请尽快取件。",
@@ -59,39 +59,58 @@ struct PickupParserTests {
         }
     }
 
-    @Test("Parses English station and courier messages")
+    @Test("Parses English station and locker messages")
     func parsesEnglishMessages() throws {
         let cainiao = try #require(
             parser.parse("Cainiao: Your parcel arrived at North Pickup Point. Pickup code: 4-2-1048").first
         )
-        #expect(cainiao.channel == .cainiao)
+        #expect(cainiao.channel == .station)
         #expect(cainiao.pickupCode == "4-2-1048")
         #expect(cainiao.stationLabel == "North Pickup Point")
 
         let yixiaoji = try #require(
             parser.parse("Yixiaoji locker ready at Sample Locker A1, code: B12-0457").first
         )
-        #expect(yixiaoji.channel == .yixiaoji)
+        #expect(yixiaoji.channel == .locker)
         #expect(yixiaoji.pickupCode == "B12-0457")
         #expect(yixiaoji.stationLabel == "Sample Locker A1")
 
         let duoduo = try #require(
             parser.parse("Duoduo Station delivered to Demo Station B, code 1-2345").first
         )
-        #expect(duoduo.channel == .duoduo)
+        #expect(duoduo.channel == .station)
         #expect(duoduo.pickupCode == "1-2345")
         #expect(duoduo.stationLabel == "Demo Station B")
     }
 
-    // MARK: - Station Precedence Over Carrier Prefix
+    @Test("Classifies additional station and locker brands into station and locker groups")
+    func parsesAdditionalStationAndLockerBrands() throws {
+        let cases: [(text: String, expectedChannel: PickupChannel)] = [
+            ("【兔喜生活】您的包裹已到达Sample Station，取件码12-3-0000。", .station),
+            ("【妈妈驿站】您的包裹已到达Sample Station，取件码12-3-0000。", .station),
+            ("【近邻宝驿站】您的包裹已到达Sample Station，取件码12-3-0000。", .station),
+            ("【校园驿站】您的包裹已到达Sample Station，取件码12-3-0000。", .station),
+            ("【丰巢】您的顺丰快件SF0000000000000已存入Sample Locker A1，取件码884210。", .locker),
+            ("【近邻宝】您的包裹已存入智能柜，开柜码A03-8821。", .locker),
+            ("【快递通知】您的包裹已存入自提柜，凭884210取件。", .locker),
+            ("Parcel delivered to Smart Locker A1, pickup code 884210.", .locker),
+        ]
 
-    @Test("Explicit station keyword overrides carrier tracking prefix and carrier keyword")
+        for item in cases {
+            let draft = try #require(parser.parse(item.text).first, "Expected draft for: \(item.text)")
+            #expect(draft.channel == item.expectedChannel, "Wrong channel for: \(item.text)")
+        }
+    }
+
+    // MARK: - Pickup Point Precedence Over Carrier Prefix
+
+    @Test("Explicit pickup point overrides carrier brands while JD and SF stations keep courier group")
     func stationOverridesCarrier() throws {
         let sfAtDuoduo = """
         【多多驿站】您的顺丰包裹(SF0000000000000)已到达Demo Station B，取件码12-3-0000。
         """
         let duoduoDraft = try #require(parser.parse(sfAtDuoduo).first)
-        #expect(duoduoDraft.channel == .duoduo)
+        #expect(duoduoDraft.channel == .station)
         #expect(duoduoDraft.pickupCode == "12-3-0000")
         #expect(duoduoDraft.trackingNumber == "SF0000000000000")
         #expect(duoduoDraft.stationLabel == "Demo Station B")
@@ -100,16 +119,75 @@ struct PickupParserTests {
         【菜鸟驿站】您的京东快递JD0000000000000已到North Pickup Point，取件码4-2-1048。
         """
         let cainiaoDraft = try #require(parser.parse(jdAtCainiao).first)
-        #expect(cainiaoDraft.channel == .cainiao)
+        #expect(cainiaoDraft.channel == .station)
         #expect(cainiaoDraft.pickupCode == "4-2-1048")
         #expect(cainiaoDraft.trackingNumber == "JD0000000000000")
 
-        let pddBoughtAtCainiao = """
-        拼多多买的包裹到了菜鸟驿站，取件码4-2-1048
+        let pddAtLocker = """
+        拼多多买的包裹已存入宜小集Sample Locker A1，开柜码A03-8821
         """
-        let boughtDraft = try #require(parser.parse(pddBoughtAtCainiao).first)
-        #expect(boughtDraft.channel == .cainiao)
-        #expect(boughtDraft.pickupCode == "4-2-1048")
+        let lockerDraft = try #require(parser.parse(pddAtLocker).first)
+        #expect(lockerDraft.channel == .locker)
+        #expect(lockerDraft.pickupCode == "A03-8821")
+
+        let jdServiceStation = """
+        【京东快递】您的包裹已到达Sample Plaza京东快递服务站，取件码C3-0000。
+        """
+        let jdServiceDraft = try #require(parser.parse(jdServiceStation).first)
+        #expect(jdServiceDraft.channel == .jd)
+        #expect(jdServiceDraft.pickupCode == "C3-0000")
+
+        let jdYizhan = """
+        【京东物流】您的包裹已到达京东驿站，取件码C3-0000。
+        """
+        let jdYizhanDraft = try #require(parser.parse(jdYizhan).first)
+        #expect(jdYizhanDraft.channel == .jd)
+
+        let sfYizhan = """
+        【顺丰速运】您的快件已到达顺丰驿站，取件码3-2-0091。
+        """
+        let sfYizhanDraft = try #require(parser.parse(sfYizhan).first)
+        #expect(sfYizhanDraft.channel == .sfExpress)
+    }
+
+    // MARK: - Real-World Station Extraction Edge Cases
+
+    @Test("Extracts clean station labels before Chinese stop words and after parenthesized location tags")
+    func parsesRealWorldStationExtractionEdgeCases() throws {
+        let jdDiguanjia = "【递管家】请凭取件码C3-0000到Sample Plaza京东快递取走您的京东快递包裹"
+        let jdDraft = try #require(parser.parse(jdDiguanjia).first)
+        #expect(jdDraft.channel == .jd)
+        #expect(jdDraft.pickupCode == "C3-0000")
+        #expect(jdDraft.stationLabel == "Sample Plaza京东快递")
+
+        let jituMovedShelf = "【极兔速递】您在Sample Station多多驿站的包裹移到新货架，凭42-1-0000提货"
+        let jituDraft = try #require(parser.parse(jituMovedShelf).first)
+        #expect(jituDraft.channel == .station)
+        #expect(jituDraft.pickupCode == "42-1-0000")
+        #expect(jituDraft.stationLabel == "Sample Station多多驿站")
+
+        let ytoWaiting = "【圆通快递】您的包裹等您很久啦，凭41-8-0000至Sample Station多多驿站尽早取"
+        let ytoWaitingDraft = try #require(parser.parse(ytoWaiting).first)
+        #expect(ytoWaitingDraft.channel == .station)
+        #expect(ytoWaitingDraft.pickupCode == "41-8-0000")
+        #expect(ytoWaitingDraft.stationLabel == "Sample Station多多驿站")
+
+        let ytoParenthesizedTag = "【圆通速递】您的生鲜快递YT0000000000000在(代收点)Sample Station多多驿站已经等很久啦！已取走请忽略"
+        let ytoFreshDraft = try #require(parser.parse(ytoParenthesizedTag).first)
+        #expect(ytoFreshDraft.channel == .station)
+        #expect(ytoFreshDraft.isTrackingOnly)
+        #expect(ytoFreshDraft.trackingNumber == "YT0000000000000")
+        #expect(ytoFreshDraft.stationLabel == "Sample Station多多驿站")
+
+        let fullwidthParenTag = "【快递提醒】您的包裹在（代收点）Sample Station滞留超过2天，取件码12-3-0000"
+        let fullwidthParenDraft = try #require(parser.parse(fullwidthParenTag).first)
+        #expect(fullwidthParenDraft.pickupCode == "12-3-0000")
+        #expect(fullwidthParenDraft.stationLabel == "Sample Station")
+
+        let pleaseTimely = "【菜鸟驿站】您的包裹已到North Pickup Point请及时取件，取件码4-2-1048"
+        let timelyDraft = try #require(parser.parse(pleaseTimely).first)
+        #expect(timelyDraft.channel == .station)
+        #expect(timelyDraft.stationLabel == "North Pickup Point")
     }
 
     // MARK: - Multi-Parcel Paste
@@ -125,7 +203,7 @@ struct PickupParserTests {
 
         let drafts = parser.parse(text)
         #expect(drafts.count == 3)
-        #expect(drafts.map(\.channel) == [.duoduo, .yixiaoji, .cainiao])
+        #expect(drafts.map(\.channel) == [.station, .locker, .station])
         #expect(drafts.map(\.pickupCode) == ["12-3-0000", "A03-8821", "4-2-1048"])
         #expect(drafts.map(\.stationLabel) == ["Demo Station B", "Sample Locker A1", "North Pickup Point"])
     }
@@ -136,7 +214,7 @@ struct PickupParserTests {
         let smsDrafts = parser.parse(singleSMS)
         #expect(smsDrafts.count == 2)
         #expect(smsDrafts.map(\.pickupCode) == ["12-3-0000", "4-2-1048"])
-        #expect(smsDrafts.allSatisfy { $0.channel == .duoduo && $0.stationLabel == "Demo Station B" })
+        #expect(smsDrafts.allSatisfy { $0.channel == .station && $0.stationLabel == "Demo Station B" })
 
         let familyPreamble = """
         今天两个快递到了菜鸟驿站：
@@ -146,7 +224,7 @@ struct PickupParserTests {
         let familyDrafts = parser.parse(familyPreamble)
         #expect(familyDrafts.count == 2)
         #expect(familyDrafts.map(\.pickupCode) == ["12-3-0000", "4-2-1048"])
-        #expect(familyDrafts.allSatisfy { $0.channel == .cainiao })
+        #expect(familyDrafts.allSatisfy { $0.channel == .station })
     }
 
     @Test("Keeps multi-line single SMS fields together while splitting bare lists")
@@ -159,7 +237,7 @@ struct PickupParserTests {
         let smsDrafts = parser.parse(multiLineSMS)
         let combined = try #require(smsDrafts.first)
         #expect(smsDrafts.count == 1)
-        #expect(combined.channel == .duoduo)
+        #expect(combined.channel == .station)
         #expect(combined.pickupCode == "12-3-0000")
         #expect(combined.trackingNumber == "YT0000000000000")
         #expect(combined.stationLabel == "Demo Station B")
@@ -179,28 +257,65 @@ struct PickupParserTests {
 
     // MARK: - Standalone Codes & Fullwidth Normalization
 
-    @Test("Parses standalone pickup codes and channel shorthand")
+    @Test("Parses standalone pickup codes, infers channel from bare code formats, and handles channel shorthand")
     func parsesStandaloneCodes() throws {
-        let hyphenated = try #require(parser.parse("12-3-0000").first)
-        #expect(hyphenated.pickupCode == "12-3-0000")
-        #expect(hyphenated.channel == .other)
+        let shelfCode = try #require(parser.parse("12-3-0000").first)
+        #expect(shelfCode.pickupCode == "12-3-0000")
+        #expect(shelfCode.channel == .station)
 
-        let alphaHyphenated = try #require(parser.parse("A03-8821").first)
-        #expect(alphaHyphenated.pickupCode == "A03-8821")
+        let jdTwoPart = try #require(parser.parse("A03-8821").first)
+        #expect(jdTwoPart.pickupCode == "A03-8821")
+        #expect(jdTwoPart.channel == .jd)
+
+        let jdShort = try #require(parser.parse("A3-1048").first)
+        #expect(jdShort.pickupCode == "A3-1048")
+        #expect(jdShort.channel == .jd)
+
+        let lockerEightDigit = try #require(parser.parse("05240000").first)
+        #expect(lockerEightDigit.pickupCode == "05240000")
+        #expect(lockerEightDigit.channel == .locker)
+
+        let sfFourDigit = try #require(parser.parse("4821").first)
+        #expect(sfFourDigit.pickupCode == "4821")
+        #expect(sfFourDigit.channel == .sfExpress)
+
+        let sfLeadingZero = try #require(parser.parse("0319").first)
+        #expect(sfLeadingZero.pickupCode == "0319")
+        #expect(sfLeadingZero.channel == .sfExpress)
 
         let sixDigit = try #require(parser.parse("884210").first)
         #expect(sixDigit.pickupCode == "884210")
+        #expect(sixDigit.channel == .other)
 
-        let channelShorthand = try #require(parser.parse("宜小集 884210").first)
-        #expect(channelShorthand.channel == .yixiaoji)
-        #expect(channelShorthand.pickupCode == "884210")
+        let explicitOverride = try #require(parser.parse("【宜小集】取件码 A3-1048").first)
+        #expect(explicitOverride.channel == .locker)
+
+        let multiBareList = parser.parse("12-3-0000\n05240000\nA3-1048\n4821")
+        #expect(multiBareList.map(\.channel) == [.station, .locker, .jd, .sfExpress])
+
+        let shorthands: [(input: String, expectedChannel: PickupChannel)] = [
+            ("宜小集 884210", .locker),
+            ("快递柜 884210", .locker),
+            ("智能柜 884210", .locker),
+            ("丰巢 884210", .locker),
+            ("Locker 884210", .locker),
+            ("驿站 884210", .station),
+            ("Station 884210", .station),
+            ("顺丰 4821", .sfExpress),
+        ]
+
+        for item in shorthands {
+            let draft = try #require(parser.parse(item.input).first, "Expected draft for: \(item.input)")
+            #expect(draft.channel == item.expectedChannel, "Wrong channel for: \(item.input)")
+            #expect(draft.pickupCode == (item.input.contains("4821") ? "4821" : "884210"))
+        }
     }
 
     @Test("Normalizes fullwidth digits, letters, and dashes")
     func normalizesFullwidthCharacters() throws {
         let text = "【宜小集】开柜码：Ａ０３—８８２１，运单号：ＳＦ０００００００００００００"
         let draft = try #require(parser.parse(text).first)
-        #expect(draft.channel == .yixiaoji)
+        #expect(draft.channel == .locker)
         #expect(draft.pickupCode == "A03-8821")
         #expect(draft.trackingNumber == "SF0000000000000")
 
@@ -251,10 +366,19 @@ struct PickupParserTests {
         let merged = parser.parse(pairedPaste)
         let draft = try #require(merged.first)
         #expect(merged.count == 1)
-        #expect(draft.channel == .duoduo)
+        #expect(draft.channel == .station)
         #expect(draft.pickupCode == "12-3-0000")
         #expect(draft.trackingNumber == "YT0000000000000")
         #expect(draft.stationLabel == "Demo Station B")
+
+        let crossBrandStationPaste = """
+        【多多驿站】您的包裹已到达Demo Station B，取件码12-3-0000。
+        【菜鸟驿站】您的包裹已到North Pickup Point，取件码12-3-0000。
+        """
+        let crossBrandMerged = parser.parse(crossBrandStationPaste)
+        #expect(crossBrandMerged.count == 1)
+        #expect(crossBrandMerged[0].channel == .station)
+        #expect(crossBrandMerged[0].pickupCode == "12-3-0000")
     }
 
     // MARK: - False-Positive Rejections
@@ -296,7 +420,7 @@ struct PickupParserTests {
         let drafts = parser.parse(sms)
         let draft = try #require(drafts.first)
         #expect(drafts.count == 1)
-        #expect(draft.channel == .cainiao)
+        #expect(draft.channel == .station)
         #expect(draft.pickupCode == "4-2-1048")
         #expect(draft.trackingNumber.isEmpty)
         #expect(draft.stationLabel == "North Pickup Point")
@@ -307,10 +431,10 @@ struct PickupParserTests {
         let concatenated = "【菜鸟驿站】请在3天内到North Pickup Point取件，取件码【4-2-1048】。【多多驿站】您的包裹已到达Demo Station B，取件码(12-3-0000)。"
         let drafts = parser.parse(concatenated)
         #expect(drafts.count == 2)
-        #expect(drafts[0].channel == .cainiao)
+        #expect(drafts[0].channel == .station)
         #expect(drafts[0].pickupCode == "4-2-1048")
         #expect(drafts[0].stationLabel == "North Pickup Point")
-        #expect(drafts[1].channel == .duoduo)
+        #expect(drafts[1].channel == .station)
         #expect(drafts[1].pickupCode == "12-3-0000")
         #expect(drafts[1].stationLabel == "Demo Station B")
 
@@ -322,7 +446,7 @@ struct PickupParserTests {
         #expect(twoWaybills[1].trackingNumber == "JD0000000000000")
 
         let englishIsCode = try #require(parser.parse("Duoduo Station pickup code is 884210").first)
-        #expect(englishIsCode.channel == .duoduo)
+        #expect(englishIsCode.channel == .station)
         #expect(englishIsCode.pickupCode == "884210")
 
         #expect(parser.parse("Your verification code is 654321").isEmpty)
@@ -337,7 +461,7 @@ struct PickupParserTests {
         """
         let drafts1 = parser.parse(withStation)
         #expect(drafts1.count == 2)
-        #expect(drafts1[0].channel == .duoduo)
+        #expect(drafts1[0].channel == .station)
         #expect(drafts1[0].stationLabel == "Demo Station B")
         #expect(drafts1[1].channel == .other)
         #expect(drafts1[1].pickupCode == "C2-15-08")
@@ -375,5 +499,42 @@ struct PickupParserTests {
         #expect(trackingThenCode[0].trackingNumber == "YT0000000000000")
         #expect(trackingThenCode[1].pickupCode == "12-3-0000")
         #expect(trackingThenCode[1].trackingNumber.isEmpty)
+    }
+
+    @Test("Keeps two station SMS with the same pickup code when tracking numbers differ")
+    func keepsDistinctTrackingStationParcelsWithSamePickupCode() {
+        let input = """
+        【多多驿站】YT0000000000000已到达Demo Point A，取件码12-3-0000。
+
+        【菜鸟驿站】JD0000000000000已到达Demo Point B，取件码12-3-0000。
+        """
+        let drafts = parser.parse(input)
+
+        #expect(drafts.count == 2)
+        #expect(drafts.map(\.channel) == [.station, .station])
+        #expect(drafts.map(\.pickupCode) == ["12-3-0000", "12-3-0000"])
+        #expect(drafts.map(\.trackingNumber) == ["YT0000000000000", "JD0000000000000"])
+        #expect(drafts.map(\.stationLabel) == ["Demo Point A", "Demo Point B"])
+    }
+
+    @Test("Classifies branded smart lockers as locker while keeping branded stations as station")
+    func classifiesBrandedSmartLockerAsLockerAndStationAsStation() throws {
+        let cainiaoLocker = try #require(
+            parser.parse("【快递通知】您的包裹已存入菜鸟智能柜，取件码12-3-0000。").first
+        )
+        #expect(cainiaoLocker.channel == .locker)
+        #expect(cainiaoLocker.pickupCode == "12-3-0000")
+
+        let guoguoHiveBox = try #require(
+            parser.parse("【菜鸟裹裹】您的包裹已存入丰巢快递柜，取件码A03-8821。").first
+        )
+        #expect(guoguoHiveBox.channel == .locker)
+        #expect(guoguoHiveBox.pickupCode == "A03-8821")
+
+        let cainiaoStation = try #require(
+            parser.parse("【菜鸟驿站】您的包裹已到North Pickup Point，取件码4-2-1048。").first
+        )
+        #expect(cainiaoStation.channel == .station)
+        #expect(cainiaoStation.pickupCode == "4-2-1048")
     }
 }

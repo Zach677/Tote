@@ -36,7 +36,7 @@ struct ParcelStoreTests {
         let draft = ParsedParcelDraft(
             pickupCode: "12-3-0000",
             trackingNumber: "YT0000000000000",
-            channel: .duoduo,
+            channel: .station,
             stationLabel: "Demo Station B",
             note: "Demo Item"
         )
@@ -106,7 +106,7 @@ struct ParcelStoreTests {
         let arrivalDraft = ParsedParcelDraft(
             pickupCode: "12-3-0000",
             trackingNumber: "SF0000000000000",
-            channel: .duoduo,
+            channel: .station,
             stationLabel: "Demo Station B"
         )
         let upgraded = try store1.add([arrivalDraft], source: .pasted)
@@ -116,7 +116,7 @@ struct ParcelStoreTests {
         #expect(upgraded.firstAffectedID == original.id)
         #expect(upgraded.updated[0].id == original.id)
         #expect(upgraded.updated[0].pickupCode == "12-3-0000")
-        #expect(upgraded.updated[0].channel == .duoduo)
+        #expect(upgraded.updated[0].channel == .station)
         #expect(upgraded.updated[0].stationLabel == "Demo Station B")
         #expect(upgraded.updated[0].note == "Demo Item")
     }
@@ -138,11 +138,11 @@ struct ParcelStoreTests {
         let seedStore = ParcelStore(directoryURL: dir, now: { oldPendingDate })
         let added = try seedStore.add(
             [
-                ParsedParcelDraft(pickupCode: "1-0-0001", channel: .duoduo),
-                ParsedParcelDraft(pickupCode: "1-0-0002", channel: .duoduo),
-                ParsedParcelDraft(pickupCode: "1-0-0003", channel: .duoduo),
-                ParsedParcelDraft(pickupCode: "1-0-0004", channel: .duoduo),
-                ParsedParcelDraft(pickupCode: "1-0-0005", channel: .duoduo),
+                ParsedParcelDraft(pickupCode: "1-0-0001", channel: .station),
+                ParsedParcelDraft(pickupCode: "1-0-0002", channel: .station),
+                ParsedParcelDraft(pickupCode: "1-0-0003", channel: .station),
+                ParsedParcelDraft(pickupCode: "1-0-0004", channel: .station),
+                ParsedParcelDraft(pickupCode: "1-0-0005", channel: .station),
             ],
             source: .manual
         ).added
@@ -249,9 +249,11 @@ struct ParcelStoreTests {
                   "id": "00000000-0000-0000-0000-000000000010",
                   "pickupCode": "12-3-0000",
                   "trackingNumber": "YT0000000000000",
-                  "channel": "duoduo",
+                  "channel": "station",
                   "stationLabel": "Demo Station B",
                   "note": "",
+                  "lockerMAC": "",
+                  "lockerSiteID": "",
                   "status": { "pending": {} },
                   "source": "pasted",
                   "createdAt": "2025-11-26T08:00:00Z",
@@ -267,7 +269,51 @@ struct ParcelStoreTests {
         let parcel = try #require(loaded.first)
         #expect(loaded.count == 1)
         #expect(parcel.pickupCode == "12-3-0000")
-        #expect(parcel.channel == .duoduo)
+        #expect(parcel.channel == .station)
+    }
+
+    @Test("Throws corruptedData on unknown channel string without overwriting the file")
+    func rejectsUnknownChannelJSONAsCorruptedData() throws {
+        let dir = makeTempDirectory()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+
+        let store = ParcelStore(directoryURL: dir)
+        let unknownChannelJSON = Data(
+            """
+            {
+              "schemaVersion": 1,
+              "parcels": [
+                {
+                  "id": "00000000-0000-0000-0000-000000000088",
+                  "pickupCode": "12-3-0000",
+                  "trackingNumber": "",
+                  "channel": "unknownBrand",
+                  "stationLabel": "",
+                  "note": "",
+                  "lockerMAC": "",
+                  "lockerSiteID": "",
+                  "status": { "pending": {} },
+                  "source": "manual",
+                  "createdAt": "2025-11-26T08:00:00Z",
+                  "updatedAt": "2025-11-26T08:00:00Z"
+                }
+              ]
+            }
+            """.utf8
+        )
+        try unknownChannelJSON.write(to: store.fileURL)
+
+        do {
+            _ = try store.load()
+            Issue.record("Expected ParcelStoreError.corruptedData for unknown channel string")
+        } catch ParcelStoreError.corruptedData {
+            // Expected
+        } catch {
+            Issue.record("Unexpected error: \(error)")
+        }
+
+        #expect(try Data(contentsOf: store.fileURL) == unknownChannelJSON)
     }
 
     @Test("Coalesces intra-batch tracking-only and arrival drafts into a single added parcel")
@@ -282,7 +328,7 @@ struct ParcelStoreTests {
         let arrivalDraft = ParsedParcelDraft(
             pickupCode: "12-3-0000",
             trackingNumber: "YT0000000000000",
-            channel: .duoduo,
+            channel: .station,
             stationLabel: "Demo Station B"
         )
 
@@ -292,7 +338,7 @@ struct ParcelStoreTests {
         #expect(result.skippedDuplicateCount == 0)
         #expect(result.added[0].pickupCode == "12-3-0000")
         #expect(result.added[0].trackingNumber == "YT0000000000000")
-        #expect(result.added[0].channel == .duoduo)
+        #expect(result.added[0].channel == .station)
         #expect(try store.load().count == 1)
     }
 
@@ -312,9 +358,11 @@ struct ParcelStoreTests {
                   "id": "00000000-0000-0000-0000-000000000099",
                   "pickupCode": "1-0-0001",
                   "trackingNumber": "",
-                  "channel": "duoduo",
+                  "channel": "station",
                   "stationLabel": "",
                   "note": "",
+                  "lockerMAC": "",
+                  "lockerSiteID": "",
                   "status": { "pending": {} },
                   "source": "manual",
                   "createdAt": "2025-11-26T08:00:00Z",
@@ -324,9 +372,11 @@ struct ParcelStoreTests {
                   "id": "00000000-0000-0000-0000-000000000099",
                   "pickupCode": "1-0-0002",
                   "trackingNumber": "",
-                  "channel": "cainiao",
+                  "channel": "locker",
                   "stationLabel": "",
                   "note": "",
+                  "lockerMAC": "",
+                  "lockerSiteID": "",
                   "status": { "pending": {} },
                   "source": "manual",
                   "createdAt": "2025-11-26T08:00:00Z",
@@ -357,7 +407,7 @@ struct ParcelStoreTests {
         let seedStore = ParcelStore(directoryURL: dir, now: { exact30DaysAgo })
 
         let added = try seedStore.add(
-            [ParsedParcelDraft(pickupCode: "1-0-0001", channel: .duoduo)],
+            [ParsedParcelDraft(pickupCode: "1-0-0001", channel: .station)],
             source: .manual
         ).added
         try seedStore.markPickedUp(id: added[0].id)

@@ -98,13 +98,14 @@ private extension EditParcelViewController {
         }
         navigationItem.largeTitleDisplayMode = .never
 
-        saveButton = UIBarButtonItem(
-            systemItem: .done,
+        saveButton = UIBarButtonItem.prominentIconItem(
+            systemName: "checkmark",
+            accessibilityLabel: String(localized: "Done"),
+            isEnabled: draft.isValid,
             primaryAction: UIAction { [weak self] _ in
                 self?.commitSave()
             }
         )
-        saveButton.style = .prominent
         navigationItem.rightBarButtonItem = saveButton
     }
 
@@ -194,7 +195,7 @@ private extension EditParcelViewController {
             }
         case .station:
             cell.configure(
-                title: String(localized: "Station"),
+                title: String(localized: "Pickup Point"),
                 text: draft.stationLabel,
                 placeholder: String(localized: "Optional"),
                 font: .preferredFont(forTextStyle: .body),
@@ -255,7 +256,7 @@ private extension EditParcelViewController {
     }
 
     func updateSaveButtonState() {
-        saveButton.isEnabled = draft.isValid
+        saveButton.updateProminentIconEnabled(draft.isValid, systemName: "checkmark")
     }
 }
 

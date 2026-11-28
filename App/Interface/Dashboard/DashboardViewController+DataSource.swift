@@ -22,7 +22,7 @@ extension DashboardViewController {
             cell.configurationUpdateHandler = { cell, state in
                 guard let listCell = cell as? UICollectionViewListCell else { return }
                 var content = UIListContentConfiguration.subtitleCell()
-                content.image = PickupChannel.duoduo.iconTileImage(
+                content.image = PickupChannel.station.iconTileImage(
                     baseSize: 36,
                     maxSize: 44,
                     compatibleWith: state.traitCollection
@@ -251,14 +251,14 @@ private extension DashboardViewController {
             ])
             cell.accessories = [Self.makeSymbolAccessory(named: "arrow.up.forward.app", tintColor: .tintColor)]
             cell.accessibilityHint = String(localized: "Copy tracking number and open Duoduo")
-        } else if parcel.channel == .yixiaoji {
+        } else if parcel.channel == .locker {
             content.text = parcel.pickupCode
             content.textProperties.font = ParcelTypography.pendingPickupCodeFont
             content.textProperties.color = .label
             let baseDetails = joinedDetailParts([parcel.stationLabel, parcel.note])
             content.secondaryText = baseDetails ?? (parcel.trackingNumber.isEmpty ? nil : parcel.trackingNumber)
-            cell.accessories = [Self.makeSymbolAccessory(named: "arrow.right", tintColor: .tintColor)]
-            cell.accessibilityHint = String(localized: "Copy pickup code and open Yixiaoji")
+            cell.accessories = [Self.makeSymbolAccessory(named: "lock.open", tintColor: .tintColor)]
+            cell.accessibilityHint = String(localized: "Open locker controls")
         } else {
             content.text = parcel.pickupCode
             content.textProperties.font = ParcelTypography.pendingPickupCodeFont

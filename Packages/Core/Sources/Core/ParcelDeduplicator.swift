@@ -70,6 +70,8 @@ public struct ParcelDeduplicator: Sendable {
         let cleanTracking = ParcelNormalization.cleanDisplayTrackingNumber(draft.trackingNumber)
         let cleanStation = draft.stationLabel.trimmingCharacters(in: .whitespacesAndNewlines)
         let cleanNote = draft.note.trimmingCharacters(in: .whitespacesAndNewlines)
+        let cleanLockerMAC = draft.lockerMAC.trimmingCharacters(in: .whitespacesAndNewlines)
+        let cleanLockerSiteID = draft.lockerSiteID.trimmingCharacters(in: .whitespacesAndNewlines)
 
         if !cleanCode.isEmpty {
             merged.pickupCode = cleanCode
@@ -79,7 +81,7 @@ public struct ParcelDeduplicator: Sendable {
         }
         if draft.channel != .other {
             if merged.channel == .other
-                || draft.channel.isStationChannel
+                || draft.channel.isPhysicalPickupPoint
                 || existing.isTrackingOnly
             {
                 merged.channel = draft.channel
@@ -90,6 +92,12 @@ public struct ParcelDeduplicator: Sendable {
         }
         if !cleanNote.isEmpty {
             merged.note = cleanNote
+        }
+        if !cleanLockerMAC.isEmpty {
+            merged.lockerMAC = cleanLockerMAC
+        }
+        if !cleanLockerSiteID.isEmpty {
+            merged.lockerSiteID = cleanLockerSiteID
         }
 
         merged.updatedAt = updatedAt
@@ -105,10 +113,19 @@ private extension ParcelDeduplicator {
         guard draft.isValid else { return .new }
 
         if draft.hasPickupCode {
-            if let existing = pending.first(where: {
-                $0.hasPickupCode
-                    && $0.channel == draft.channel
-                    && $0.normalizedPickupCode == draft.normalizedPickupCode
+            if let existing = pending.first(where: { candidate in
+                guard candidate.hasPickupCode,
+                      candidate.channel == draft.channel,
+                      candidate.normalizedPickupCode == draft.normalizedPickupCode
+                else { return false }
+
+                if draft.hasTrackingNumber,
+                   candidate.hasTrackingNumber,
+                   draft.normalizedTrackingNumber != candidate.normalizedTrackingNumber
+                {
+                    return false
+                }
+                return true
             }) {
                 return .duplicate(existingID: existing.id)
             }

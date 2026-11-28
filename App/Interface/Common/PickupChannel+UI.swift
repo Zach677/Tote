@@ -4,16 +4,14 @@ import UIKit
 extension PickupChannel {
     var localizedName: String {
         switch self {
-        case .duoduo:
-            String(localized: "Duoduo Station")
-        case .yixiaoji:
-            String(localized: "Yixiaoji")
-        case .cainiao:
-            String(localized: "Cainiao")
-        case .sfExpress:
-            String(localized: "SF Express")
+        case .station:
+            String(localized: "Station")
+        case .locker:
+            String(localized: "Locker")
         case .jd:
             String(localized: "JD")
+        case .sfExpress:
+            String(localized: "SF Express")
         case .other:
             String(localized: "Other")
         }
@@ -21,16 +19,14 @@ extension PickupChannel {
 
     var symbolName: String {
         switch self {
-        case .duoduo:
+        case .station:
             "storefront"
-        case .yixiaoji:
+        case .locker:
             "cabinet"
-        case .cainiao:
-            "bird"
-        case .sfExpress:
-            "airplane"
         case .jd:
             "cart"
+        case .sfExpress:
+            "airplane"
         case .other:
             "shippingbox"
         }
@@ -38,16 +34,14 @@ extension PickupChannel {
 
     var tintColor: UIColor {
         switch self {
-        case .duoduo:
+        case .station:
             .systemRed
-        case .yixiaoji:
+        case .locker:
             .systemIndigo
-        case .cainiao:
-            .systemTeal
-        case .sfExpress:
-            .systemPurple
         case .jd:
             .systemPink
+        case .sfExpress:
+            .systemPurple
         case .other:
             .systemGray
         }
