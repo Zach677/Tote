@@ -3,6 +3,29 @@ import Foundation
 import UIKit
 
 extension DashboardViewController {
+    func observeExternalParcelUpdates() {
+        dependencies.notificationCenter.addObserver(
+            self,
+            selector: #selector(handleExternalParcelsChange),
+            name: .toteParcelsDidChange,
+            object: nil
+        )
+        dependencies.notificationCenter.addObserver(
+            self,
+            selector: #selector(handleWillEnterForeground),
+            name: UIApplication.willEnterForegroundNotification,
+            object: nil
+        )
+    }
+
+    @objc func handleExternalParcelsChange() {
+        reloadParcels(animatingDifferences: viewIfLoaded?.window != nil)
+    }
+
+    @objc func handleWillEnterForeground() {
+        reloadParcels(animatingDifferences: false)
+    }
+
     @objc func handleSegmentChanged() {
         let segment = Segment(rawValue: segmentedControl.selectedSegmentIndex) ?? .pending
         selectSegment(segment)

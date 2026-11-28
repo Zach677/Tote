@@ -150,6 +150,7 @@ struct TestEnvironment {
     let launcher: FakeExternalLauncher
     let settings: InMemorySettingsStore
     let yixiaoji: FakeYixiaojiService
+    let notificationCenter: NotificationCenter
     let store: ParcelStore
     let directoryURL: URL
 
@@ -165,6 +166,7 @@ struct TestEnvironment {
         let launcher = FakeExternalLauncher()
         let settings = InMemorySettingsStore(duoduoURLString: duoduoURLString)
         let yixiaoji = FakeYixiaojiService(session: yixiaojiSession)
+        let notificationCenter = NotificationCenter()
 
         self.directoryURL = directoryURL
         self.store = store
@@ -172,12 +174,14 @@ struct TestEnvironment {
         self.launcher = launcher
         self.settings = settings
         self.yixiaoji = yixiaoji
+        self.notificationCenter = notificationCenter
         dependencies = AppDependencies(
             parcelStore: store,
             clipboard: clipboard,
             launcher: launcher,
             settings: settings,
-            yixiaoji: yixiaoji
+            yixiaoji: yixiaoji,
+            notificationCenter: notificationCenter
         )
     }
 

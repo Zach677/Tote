@@ -14,6 +14,7 @@ Read [docs/DECISIONS.md](docs/DECISIONS.md) before changing architecture, channe
 ## Layout
 
 - `App/Application/`: lifecycle and app-wide composition only. No feature logic.
+- `App/Intents/`: App Intents and `AppShortcutsProvider` entry points.
 - `App/Interface/<Feature>/`: view controllers, views, and cells for one feature. Move a type to `Interface/Common/` only when two or more features use it.
 - `App/Services/`: side effects such as notifications, camera, and network clients.
 - `App/Resources/`: assets, `Info.plist`, `Localizable.xcstrings`, and other files that ship in the app. Mac Catalyst App Sandbox entitlements (`CODE_SIGN_ENTITLEMENTS[sdk=macosx*]`) and `ENABLE_HARDENED_RUNTIME[sdk=macosx*]` belong on the `App` target in the Xcode project, not in `Base.xcconfig`, because `AppTests` also inherits `Base.xcconfig`.

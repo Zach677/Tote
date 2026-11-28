@@ -125,6 +125,22 @@
         }
       }
     },
+    "Add Parcels from Text" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add Parcels from Text"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "从文本添加包裹"
+          }
+        }
+      }
+    },
     "Add a pickup message to see its code here." : {
       "localizations" : {
         "en" : {
@@ -137,6 +153,102 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "添加取件短信后，取件码会显示在这里。"
+          }
+        }
+      }
+    },
+    "Add parcels from ${text}" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add parcels from ${text}"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "从 ${text} 添加包裹"
+          }
+        }
+      }
+    },
+    "Added %1$lld and updated %2$lld parcels in Tote." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Added %1$lld and updated %2$lld parcels in Tote."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已添加 %1$lld 个并更新 %2$lld 个包裹到 Tote。"
+          }
+        }
+      }
+    },
+    "Added %lld parcels to Tote." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Added %lld parcels to Tote."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已添加 %lld 个包裹到 Tote。"
+          }
+        }
+      }
+    },
+    "Added 1 parcel to Tote." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Added 1 parcel to Tote."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已添加 1 个包裹到 Tote。"
+          }
+        }
+      }
+    },
+    "All %lld parcels are already in Tote." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "All %lld parcels are already in Tote."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这 %lld 个包裹都已在 Tote 中。"
+          }
+        }
+      }
+    },
+    "Already in Tote." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Already in Tote."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "该包裹已在 Tote 中。"
           }
         }
       }
@@ -845,6 +957,22 @@
         }
       }
     },
+    "Extract pickup codes and tracking numbers from text, SMS messages, or screenshots and save them to Tote." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Extract pickup codes and tracking numbers from text, SMS messages, or screenshots and save them to Tote."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "从文本、短信或截图中提取取件码和快递单号并保存到 Tote。"
+          }
+        }
+      }
+    },
     "Invalid account or password." : {
       "localizations" : {
         "en" : {
@@ -1081,6 +1209,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "暂无取件码"
+          }
+        }
+      }
+    },
+    "No pickup codes or tracking numbers found." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No pickup codes or tracking numbers found."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未识别到取件码或快递单号。"
           }
         }
       }
@@ -1549,6 +1693,54 @@
         }
       }
     },
+    "Saved %1$lld parcels to Tote (%2$lld skipped)." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Saved %1$lld parcels to Tote (%2$lld skipped)."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已保存 %1$lld 个包裹到 Tote（跳过 %2$lld 个重复）。"
+          }
+        }
+      }
+    },
+    "Saved 1 parcel to Tote (%lld skipped)." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Saved 1 parcel to Tote (%lld skipped)."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已保存 1 个包裹到 Tote（跳过 %lld 个重复）。"
+          }
+        }
+      }
+    },
+    "Saved Parcel Count" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Saved Parcel Count"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已保存包裹数"
+          }
+        }
+      }
+    },
     "Selected locker for opening" : {
       "localizations" : {
         "en" : {
@@ -1849,6 +2041,22 @@
         }
       }
     },
+    "Text" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Text"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "文本"
+          }
+        }
+      }
+    },
     "The Open Duoduo Station button opens this link. Change it if you find a link that opens the identity code directly." : {
       "localizations" : {
         "en" : {
@@ -1909,6 +2117,38 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "重试"
+          }
+        }
+      }
+    },
+    "Updated %lld parcels in Tote." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Updated %lld parcels in Tote."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已更新 %lld 个包裹。"
+          }
+        }
+      }
+    },
+    "Updated 1 parcel in Tote." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Updated 1 parcel in Tote."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已更新 1 个包裹。"
           }
         }
       }

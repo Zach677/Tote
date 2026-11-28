@@ -1,6 +1,10 @@
 import Core
 import Foundation
 
+extension Notification.Name {
+    nonisolated static let toteParcelsDidChange = Notification.Name("org.zaxh.tote.parcelsDidChange")
+}
+
 struct AppDependencies {
     static let yixiaojiWebFallbackURL = URL(string: "https://ai.iepple.com/h5/#/")!
 
@@ -9,6 +13,7 @@ struct AppDependencies {
     let launcher: any ExternalLaunching
     let settings: any SettingsStoring
     let yixiaoji: any YixiaojiServicing
+    let notificationCenter: NotificationCenter
     let parser: PickupParser
     let deduplicator: ParcelDeduplicator
 
@@ -18,6 +23,7 @@ struct AppDependencies {
         launcher: any ExternalLaunching,
         settings: any SettingsStoring,
         yixiaoji: any YixiaojiServicing,
+        notificationCenter: NotificationCenter = .default,
         parser: PickupParser = PickupParser(),
         deduplicator: ParcelDeduplicator = ParcelDeduplicator()
     ) {
@@ -26,18 +32,23 @@ struct AppDependencies {
         self.launcher = launcher
         self.settings = settings
         self.yixiaoji = yixiaoji
+        self.notificationCenter = notificationCenter
         self.parser = parser
         self.deduplicator = deduplicator
     }
 
-    static func live() -> AppDependencies {
+    static func liveParcelStore() -> ParcelStore {
         let baseDirectory = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
             ?? FileManager.default.temporaryDirectory
         let toteDirectory = baseDirectory.appendingPathComponent("Tote", isDirectory: true)
+        return ParcelStore(directoryURL: toteDirectory)
+    }
+
+    static func live() -> AppDependencies {
         let sessionStore = KeychainYixiaojiSessionStore()
 
         return AppDependencies(
-            parcelStore: ParcelStore(directoryURL: toteDirectory),
+            parcelStore: liveParcelStore(),
             clipboard: SystemClipboardService(),
             launcher: SystemExternalLauncher(),
             settings: UserDefaultsSettingsStore(),

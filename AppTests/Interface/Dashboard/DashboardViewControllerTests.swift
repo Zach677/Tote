@@ -254,4 +254,32 @@ struct DashboardViewControllerTests {
         #expect(controller.pendingLoadErrorTitle == nil)
         #expect((controller.presentedViewController ?? nav.presentedViewController) is UIAlertController)
     }
+
+    @Test
+    func refreshesAutomaticallyOnExternalParcelNotificationAndForegroundReturn() throws {
+        let env = TestEnvironment()
+        defer { env.cleanup() }
+
+        let controller = DashboardViewController(dependencies: env.dependencies)
+        controller.loadViewIfNeeded()
+        #expect(controller.parcels.isEmpty)
+
+        // 1. In-process App Intent ingestion posts .toteParcelsDidChange -> immediate reload.
+        _ = try AddParcelsFromTextIntent.ingest(
+            text: "【Demo Station】凭取件码12-3-0000到站取件",
+            into: env.store,
+            notificationCenter: env.notificationCenter
+        )
+        #expect(controller.parcels.count == 1)
+        #expect(controller.parcels.first?.pickupCode == "12-3-0000")
+
+        // 2. Direct store write followed by willEnterForegroundNotification -> reload on foreground return.
+        _ = try env.store.add(
+            [ParsedParcelDraft(pickupCode: "05240000", channel: .locker)],
+            source: .pasted
+        )
+        env.notificationCenter.post(name: UIApplication.willEnterForegroundNotification, object: nil)
+        #expect(controller.parcels.count == 2)
+        #expect(controller.dataSource.snapshot().sectionIdentifiers.contains(.channel(.locker)))
+    }
 }

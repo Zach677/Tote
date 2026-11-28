@@ -38,13 +38,24 @@ EXCLUDE_DIR_NAMES = {
 
 DEFAULT_SOURCE_LANGUAGE = "en"
 
-LOCALIZED_KEY_RE = re.compile(
-    r'(?:String\(\s*localized:|NSLocalizedString\()\s*"((?:[^"\\]|\\.)*)"'
+LOCALIZED_KEY_PATTERNS = (
+    re.compile(r'(?:String\(\s*localized:|NSLocalizedString\()\s*"((?:[^"\\]|\\.)*)"'),
+    re.compile(r':\s*LocalizedStringResource\??\s*=\s*"((?:[^"\\]|\\.)*)"'),
+    re.compile(r'LocalizedStringResource\(\s*"((?:[^"\\]|\\.)*)"'),
+    re.compile(r'IntentDialog\(\s*"((?:[^"\\]|\\.)*)"'),
+    re.compile(r'IntentDescription\(\s*"((?:[^"\\]|\\.)*)"'),
+    re.compile(r'(?:resultValueName|shortTitle):\s*"((?:[^"\\]|\\.)*)"'),
+    re.compile(r'@Parameter\([^)]*?title:\s*"((?:[^"\\]|\\.)*)"'),
+    re.compile(r'\bSummary\(\s*"((?:[^"\\]|\\.)*)"'),
 )
 
-# Xcode stores `"\(value)"` as a format specifier such as `%lld` or `%@`.
+# Xcode stores `"\(value)"` as a format specifier such as `%lld` or `%@`,
+# and App Intents parameter summaries store `\(\.$param)` as `${param}`.
 # Both sides are reduced to a skeleton with each placeholder replaced by U+FFFC.
-FORMAT_SPECIFIER_RE = re.compile(r"%(?:\d+\$)?[-+ #0]*\d*(?:\.\d+)?(?:hh|h|ll|l|q|z|t|j)?[@dDiuUxXoOfFeEgGcCsSaAp]")
+FORMAT_SPECIFIER_RE = re.compile(
+    r"%(?:\d+\$)?[-+ #0]*\d*(?:\.\d+)?(?:hh|h|ll|l|q|z|t|j)?[@dDiuUxXoOfFeEgGcCsSaAp]"
+    r"|\$\{[A-Za-z_][A-Za-z0-9_]*\}"
+)
 PLACEHOLDER = "\ufffc"
 
 SWIFT_ESCAPES = {
@@ -124,8 +135,9 @@ def referenced_keys(scope: Path) -> set[str]:
         if any(part in EXCLUDE_DIR_NAMES for part in swift_file.parts):
             continue
         text = swift_file.read_text(encoding="utf-8")
-        for match in LOCALIZED_KEY_RE.finditer(text):
-            keys.add(unescape_swift_literal(match.group(1)))
+        for pattern in LOCALIZED_KEY_PATTERNS:
+            for match in pattern.finditer(text):
+                keys.add(unescape_swift_literal(match.group(1)))
     return keys
 
 

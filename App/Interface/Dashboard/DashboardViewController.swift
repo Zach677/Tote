@@ -48,6 +48,7 @@ final class DashboardViewController: UIViewController {
         configureCollectionView()
         configureHierarchy()
         configureDataSource()
+        observeExternalParcelUpdates()
         reloadParcels(animatingDifferences: false)
     }
 
